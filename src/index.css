@@ -413,3 +413,110 @@ body.light-mode .caa-phrase-bar {
     max-width: 100% !important;
   }
 }
+
+/* Responsive Mobile Styles */
+@media (max-width: 768px) {
+  .app-header {
+    padding: 1rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  
+  .brand {
+    font-size: 1.2rem;
+  }
+  
+  .app-container {
+    padding: 1rem;
+    gap: 1rem;
+  }
+  
+  .glass-panel {
+    border-radius: 14px;
+    padding: 1.25rem !important;
+  }
+
+  /* Dashboard Split Grid Stacking */
+  div[style*="display: grid"][style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+    gap: 1.25rem !important;
+  }
+  
+  div[style*="display: grid"][style*="gridTemplateColumns"] {
+    grid-template-columns: 1fr !important;
+    gap: 1.25rem !important;
+  }
+  
+  /* Flex elements that are horizontal on desktop */
+  div[style*="display: flex"][style*="justify-content: space-between"] {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 1rem !important;
+  }
+  
+  div[style*="display: flex"][style*="justify-content: space-between"] > button {
+    align-self: stretch !important;
+    width: 100% !important;
+  }
+  
+  /* M-CHAT & BAMBI checklist styles */
+  .glass-panel[style*="display: flex"][style*="justify-content: space-between"] {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.75rem !important;
+  }
+
+  /* BAMBI option buttons layout */
+  div[style*="display: flex"][style*="gap: 0.5rem"] {
+    flex-wrap: wrap;
+  }
+
+  .score-btn {
+    padding: 0.5rem 0.65rem;
+    font-size: 0.75rem;
+    min-width: 60px;
+    flex-grow: 1;
+  }
+
+  /* CAA alternative communication board */
+  .caa-grid {
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 0.5rem;
+  }
+  
+  .caa-card {
+    padding: 0.6rem 0.4rem;
+    border-radius: 12px;
+  }
+  
+  .caa-card-text {
+    font-size: 0.65rem;
+  }
+  
+  .caa-phrase-bar {
+    min-height: 64px;
+    padding: 0.5rem;
+  }
+
+  /* Forms and fields */
+  input, select, textarea {
+    padding: 0.7rem 0.9rem;
+    font-size: 0.85rem;
+  }
+
+  .btn:not(.btn-icon) {
+    padding: 0.65rem 1.25rem;
+    font-size: 0.85rem;
+    border-radius: 10px;
+    width: 100% !important;
+    justify-content: center;
+  }
+
+  /* Header buttons alignment */
+  .app-header > div {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
