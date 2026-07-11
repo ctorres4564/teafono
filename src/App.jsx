@@ -119,6 +119,29 @@ export default function App() {
     }
   };
 
+  const handleUpdatePatient = (updatedPatData) => {
+    const updated = patients.map(p => {
+      if (p.id === updatedPatData.id) {
+        return {
+          ...p,
+          name: updatedPatData.name,
+          age: updatedPatData.age,
+          gender: updatedPatData.gender,
+          diagnosis: updatedPatData.diagnosis,
+          birthDate: updatedPatData.birthDate,
+          speechComplaint: updatedPatData.speechComplaint
+        };
+      }
+      return p;
+    });
+
+    const activeCopy = updated.find(p => p.id === updatedPatData.id);
+    if (activeCopy) {
+      setActivePatient(activeCopy);
+    }
+    savePatientsToStorage(updated);
+  };
+
   const handleStartAssessment = (moduleName) => {
     const currentActive = patients.find(p => p.isSelected);
     if (!currentActive) return;
@@ -199,6 +222,7 @@ export default function App() {
             onSelectPatient={handleSelectPatient}
             onAddPatient={handleAddPatient}
             onDeletePatient={handleDeletePatient}
+            onUpdatePatient={handleUpdatePatient}
             onStartAssessment={handleStartAssessment}
             onViewReport={handleViewReport}
             onGoToCaa={handleGoToCaa}
