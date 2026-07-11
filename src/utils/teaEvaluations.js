@@ -6,6 +6,8 @@ export const mockTeaPatients = [
     age: 4,
     gender: "Masculino",
     diagnosis: "TEA Nível 2 de Suporte / Apraxia de Fala Infantil Suspeita",
+    birthDate: "2022-03-15",
+    speechComplaint: "Atraso na fala, suspeita de apraxia de fala infantil e baixa intencionalidade comunicativa.",
     createdAt: "2026-06-20T10:00:00.000Z",
     history: [
       {
@@ -35,6 +37,8 @@ export const mockTeaPatients = [
     age: 2,
     gender: "Feminino",
     diagnosis: "Atraso no Desenvolvimento de Linguagem (Investigação de TEA)",
+    birthDate: "2024-05-10",
+    speechComplaint: "Atraso no desenvolvimento global de linguagem, pouco contato visual e ausência de fala intencional.",
     createdAt: "2026-06-25T14:30:00.000Z",
     history: []
   }

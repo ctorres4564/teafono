@@ -7,6 +7,26 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
   const [newAge, setNewAge] = useState('');
   const [newGender, setNewGender] = useState('Masculino');
   const [newDiagnosis, setNewDiagnosis] = useState('');
+  const [newBirthDate, setNewBirthDate] = useState('');
+  const [newSpeechComplaint, setNewSpeechComplaint] = useState('');
+
+  const calculateAge = (birthDateString) => {
+    if (!birthDateString) return '';
+    const today = new Date();
+    const birthDate = new Date(birthDateString);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age < 0 ? 0 : age;
+  };
+
+  const handleBirthDateChange = (dateVal) => {
+    setNewBirthDate(dateVal);
+    const calculated = calculateAge(dateVal);
+    setNewAge(calculated !== '' ? String(calculated) : '');
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -16,13 +36,17 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
       name: newName,
       age: Number(newAge),
       gender: newGender,
-      diagnosis: newDiagnosis
+      diagnosis: newDiagnosis,
+      birthDate: newBirthDate,
+      speechComplaint: newSpeechComplaint
     });
 
     setNewName('');
     setNewAge('');
     setNewGender('Masculino');
     setNewDiagnosis('');
+    setNewBirthDate('');
+    setNewSpeechComplaint('');
     setShowAddForm(false);
   };
 
@@ -59,9 +83,15 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div className="form-group">
-                  <label>Idade (anos)</label>
-                  <input type="number" value={newAge} onChange={e => setNewAge(e.target.value)} required />
+                  <label>Data de Nascimento</label>
+                  <input type="date" value={newBirthDate} onChange={e => handleBirthDateChange(e.target.value)} required />
                 </div>
+                <div className="form-group">
+                  <label>Idade (anos - calculada)</label>
+                  <input type="number" value={newAge} onChange={e => setNewAge(e.target.value)} required readOnly style={{ opacity: 0.8, cursor: 'not-allowed' }} />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div className="form-group">
                   <label>Gênero</label>
                   <select value={newGender} onChange={e => setNewGender(e.target.value)}>
@@ -70,10 +100,29 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
                     <option value="Outro">Outro</option>
                   </select>
                 </div>
+                <div className="form-group">
+                  <label>Diagnóstico / Nível de Suporte (se houver)</label>
+                  <input type="text" value={newDiagnosis} onChange={e => setNewDiagnosis(e.target.value)} placeholder="Ex: TEA Nível 1 de Suporte" />
+                </div>
               </div>
               <div className="form-group">
-                <label>Diagnóstico / Nível de Suporte (se houver)</label>
-                <input type="text" value={newDiagnosis} onChange={e => setNewDiagnosis(e.target.value)} placeholder="Ex: TEA Nível 1 de Suporte" />
+                <label>Queixa Fonoaudiológica</label>
+                <textarea 
+                  value={newSpeechComplaint} 
+                  onChange={e => setNewSpeechComplaint(e.target.value)} 
+                  placeholder="Ex: Atraso de fala, dificuldade na mastigação, etc." 
+                  rows={2}
+                  style={{ 
+                    width: '100%', 
+                    padding: '0.65rem 0.8rem', 
+                    borderRadius: '8px', 
+                    background: 'rgba(255,255,255,0.03)', 
+                    border: '1px solid var(--border-color)', 
+                    color: 'var(--text-primary)', 
+                    fontSize: '0.9rem',
+                    resize: 'vertical'
+                  }}
+                />
               </div>
               <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
                 <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Cadastrar</button>
@@ -128,9 +177,21 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
 
           {selectedPatient ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '0.5rem' }}>
-              <div>
+               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                 <h4 style={{ fontSize: '1.2rem', fontWeight: 800 }}>{selectedPatient.name}</h4>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Status: {selectedPatient.diagnosis || "Sob investigação"}</p>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                  <strong>Diagnóstico/Nível:</strong> {selectedPatient.diagnosis || "Não informado"}
+                </p>
+                {selectedPatient.birthDate && (
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                    <strong>Data de Nascimento:</strong> {new Date(selectedPatient.birthDate + 'T00:00:00').toLocaleDateString('pt-BR')} ({selectedPatient.age} anos)
+                  </p>
+                )}
+                {selectedPatient.speechComplaint && (
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.25rem', padding: '0.5rem', background: 'rgba(255,255,255,0.02)', borderRadius: '6px', borderLeft: '3px solid var(--secondary-color)' }}>
+                    <strong>Queixa Fonoaudiológica:</strong> {selectedPatient.speechComplaint}
+                  </p>
+                )}
               </div>
 
               {/* Iniciar Avaliações */}

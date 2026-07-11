@@ -55,10 +55,16 @@ export default function ReportModule({ patient, assessmentId, onBack }) {
         </div>
 
         {/* Patient Meta Data */}
-        <div style={{ margin: '2rem 0', padding: '1.25rem', border: '1px solid var(--border-color)', borderRadius: '12px', background: 'rgba(255,255,255,0.01)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1.5rem' }}>
+        <div style={{ margin: '2rem 0 1rem 0', padding: '1.25rem', border: '1px solid var(--border-color)', borderRadius: '12px', background: 'rgba(255,255,255,0.01)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1.5rem' }}>
           <div>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Nome da Criança</span>
             <div style={{ fontWeight: 700, fontSize: '1.1rem', marginTop: '0.15rem' }}>{patient.name}</div>
+          </div>
+          <div>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Data de Nascimento</span>
+            <div style={{ fontWeight: 600, fontSize: '1.1rem', marginTop: '0.15rem' }}>
+              {patient.birthDate ? new Date(patient.birthDate + 'T00:00:00').toLocaleDateString('pt-BR') : 'Não informada'}
+            </div>
           </div>
           <div>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Idade</span>
@@ -68,11 +74,18 @@ export default function ReportModule({ patient, assessmentId, onBack }) {
             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Gênero</span>
             <div style={{ fontWeight: 600, fontSize: '1.1rem', marginTop: '0.15rem' }}>{patient.gender}</div>
           </div>
-          <div>
+          <div style={{ gridColumn: 'span 2' }}>
             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Hipótese Diagnóstica</span>
             <div style={{ fontWeight: 600, fontSize: '1.1rem', marginTop: '0.15rem' }}>{patient.diagnosis || "TEA / Atraso de Linguagem"}</div>
           </div>
         </div>
+
+        {patient.speechComplaint && (
+          <div style={{ marginBottom: '2rem', padding: '1.25rem', border: '1px solid var(--border-color)', borderRadius: '12px', background: 'rgba(255,255,255,0.01)' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Queixa Fonoaudiológica</span>
+            <div style={{ fontWeight: 500, fontSize: '1rem', marginTop: '0.25rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>{patient.speechComplaint}</div>
+          </div>
+        )}
 
         {/* Results Details */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>

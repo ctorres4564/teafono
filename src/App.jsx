@@ -92,6 +92,8 @@ export default function App() {
       age: newPatData.age,
       gender: newPatData.gender,
       diagnosis: newPatData.diagnosis,
+      birthDate: newPatData.birthDate,
+      speechComplaint: newPatData.speechComplaint,
       createdAt: new Date().toISOString(),
       history: [],
       isSelected: true
