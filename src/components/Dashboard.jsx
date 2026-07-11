@@ -433,6 +433,57 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
                   </div>
                 )}
               </div>
+
+              {/* Evolução de Pragmática */}
+              {(() => {
+                const pragmaticsHistory = (selectedPatient.history || [])
+                  .filter(h => h.results && h.results.pragmatics)
+                  .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                if (pragmaticsHistory.length < 2) return null;
+
+                return (
+                  <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem', marginTop: '0.25rem' }}>
+                    <h5 style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
+                      📈 Evolução da Pragmática
+                    </h5>
+                    <div className="glass-panel" style={{ padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', background: 'rgba(139, 92, 246, 0.02)' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr', gap: '0.5rem', fontSize: '0.75rem', fontWeight: 700, borderBottom: '1px solid var(--border-color)', paddingBottom: '0.25rem', color: 'var(--text-secondary)' }}>
+                        <span>Data</span>
+                        <span>Frequência</span>
+                        <span>Meio Predominante</span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: '120px', overflowY: 'auto' }}>
+                        {pragmaticsHistory.map((hist, idx) => {
+                          const currentRate = hist.results.pragmatics.ratePerMinute;
+                          const prevRate = idx > 0 ? pragmaticsHistory[idx - 1].results.pragmatics.ratePerMinute : null;
+                          let diffIndicator = null;
+                          if (prevRate !== null) {
+                            const diff = currentRate - prevRate;
+                            if (diff > 0) {
+                              diffIndicator = <span style={{ color: '#10b981', marginLeft: '0.25rem', fontWeight: 700 }}>▲ (+{diff.toFixed(1)})</span>;
+                            } else if (diff < 0) {
+                              diffIndicator = <span style={{ color: '#ef4444', marginLeft: '0.25rem', fontWeight: 700 }}>▼ ({diff.toFixed(1)})</span>;
+                            }
+                          }
+                          return (
+                            <div key={hist.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr', gap: '0.5rem', fontSize: '0.8rem', alignItems: 'center' }}>
+                              <span>{new Date(hist.date).toLocaleDateString('pt-BR')}</span>
+                              <span style={{ fontWeight: 600 }}>
+                                {currentRate}/min
+                                {diffIndicator}
+                              </span>
+                              <span style={{ fontSize: '0.75rem', color: hist.results.pragmatics.predominantMean?.includes('Verbal') ? '#10b981' : 'var(--text-secondary)' }}>
+                                {hist.results.pragmatics.predominantMean}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )
         ) : (

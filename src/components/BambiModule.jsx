@@ -13,7 +13,15 @@ export default function BambiModule({ patient, onBack, onSaveAssessment }) {
     { id: 7, text: "A criança engasga, tem náusea (gag reflex) ou vomita com facilidade diante de certos cheiros ou texturas?" },
     { id: 8, text: "A criança armazena comida na boca sem mastigar/deglutir por longos períodos (bolsamento)?" },
     { id: 9, text: "A criança prefere apenas alimentos com cores específicas (ex: come apenas alimentos brancos ou amarelos)?" },
-    { id: 10, text: "A criança come uma variedade muito reduzida de alimentos (menos de 15 a 20 alimentos no total)?" }
+    { id: 10, text: "A criança come uma variedade muito reduzida de alimentos (menos de 15 a 20 alimentos no total)?" },
+    { id: 11, text: "A criança é agressiva durante as refeições (ex: bate, morde ou joga comida/utensílios)?" },
+    { id: 12, text: "A criança rejeita alimentos que requerem muita mastigação (ex: carnes ou vegetais fibrosos)?" },
+    { id: 13, text: "A criança aceita comer apenas se estiver distraída por telas (TV, tablet ou celular)?" },
+    { id: 14, text: "A criança come muito rápido ou coloca muita comida na boca de uma só vez?" },
+    { id: 15, text: "A criança apresenta interesse ou comportamento obsessivo por utensílios específicos durante a refeição?" },
+    { id: 16, text: "A criança aceita comer em ambientes diferentes de casa (ex: restaurantes, escola ou casa de parentes)?" },
+    { id: 17, text: "A criança fica ansiosa ou irritada ao ver alimentos que não gosta dispostos na mesa?" },
+    { id: 18, text: "A criança apresenta reações de defesa sensorial ao toque de certos alimentos com as mãos (aversão táctil)?" }
   ];
 
   // Armazena as respostas locais do BAMBI de 1 a 5 (inicialmente 3 - Às vezes)
@@ -90,7 +98,7 @@ export default function BambiModule({ patient, onBack, onSaveAssessment }) {
       {/* Footer */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' }}>
         <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-          Escore Atual Acumulado: <strong>{currentTotal} / 50 pontos</strong>
+          Escore Atual Acumulado: <strong>{currentTotal} / 90 pontos</strong>
         </span>
         <button className="btn btn-primary" onClick={handleSave} style={{ width: '220px', height: '48px' }}>
           <CheckCircle size={18} /> Salvar Avaliação BAMBI
