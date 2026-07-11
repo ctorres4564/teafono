@@ -7,6 +7,14 @@ import {
   collection, 
   deleteDoc 
 } from 'firebase/firestore';
+import {
+  getAuth,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
+  signOut,
+  onAuthStateChanged
+} from 'firebase/auth';
 
 // Lê chaves do Vite env (.env) ou usa as credenciais padrão do seu projeto do Firebase
 const firebaseConfig = {
@@ -20,6 +28,7 @@ const firebaseConfig = {
 
 let app = null;
 let db = null;
+let auth = null;
 
 // Inicialização segura do Firebase (Modo Híbrido)
 const isConfigValid = firebaseConfig.projectId && firebaseConfig.apiKey;
@@ -29,7 +38,12 @@ if (isConfigValid) {
     if (getApps().length === 0) {
       app = initializeApp(firebaseConfig);
       db = getFirestore(app);
-      console.log("Google Firebase Firestore inicializado e ativo em nuvem.");
+      auth = getAuth(app);
+      console.log("Google Firebase Auth e Firestore inicializados em nuvem.");
+    } else {
+      app = getApps()[0];
+      db = getFirestore(app);
+      auth = getAuth(app);
     }
   } catch (err) {
     console.error("Falha ao inicializar o Firebase. Rodando no modo local.", err);
@@ -42,44 +56,45 @@ if (isConfigValid) {
  * Retorna se o Firebase está ativo no momento
  */
 export function isFirebaseEnabled() {
-  return db !== null;
+  return db !== null && auth !== null;
 }
 
+export { auth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut, onAuthStateChanged };
+
 /**
- * Salva ou atualiza um paciente individual no Firestore
+ * Salva ou atualiza um paciente individual no Firestore sob o UID do usuário
  */
-export async function savePatientToFirestore(patient) {
-  if (!db) return;
+export async function savePatientToFirestore(patient, userId) {
+  if (!db || !userId) return;
   try {
-    const patientRef = doc(db, 'patients', patient.id);
-    // Salva o objeto do paciente com histórico de exames integrado
+    const patientRef = doc(db, 'users', userId, 'patients', patient.id);
     await setDoc(patientRef, patient, { merge: true });
-    console.log(`Paciente ${patient.name} (${patient.id}) sincronizado na nuvem.`);
+    console.log(`Paciente ${patient.name} (${patient.id}) sincronizado na nuvem para o usuário ${userId}.`);
   } catch (err) {
     console.error("Erro ao sincronizar paciente no Firestore:", err);
   }
 }
 
 /**
- * Remove um paciente do Firestore pelo ID
+ * Remove um paciente do Firestore pelo ID sob o UID do usuário
  */
-export async function deletePatientFromFirestore(patientId) {
-  if (!db) return;
+export async function deletePatientFromFirestore(patientId, userId) {
+  if (!db || !userId) return;
   try {
-    await deleteDoc(doc(db, 'patients', patientId));
-    console.log(`Paciente ${patientId} removido da nuvem.`);
+    await deleteDoc(doc(db, 'users', userId, 'patients', patientId));
+    console.log(`Paciente ${patientId} removido da nuvem para o usuário ${userId}.`);
   } catch (err) {
     console.error("Erro ao deletar paciente do Firestore:", err);
   }
 }
 
 /**
- * Carrega a lista completa de pacientes do Firestore
+ * Carrega a lista completa de pacientes do Firestore sob o UID do usuário
  */
-export async function loadPatientsFromFirestore() {
-  if (!db) return [];
+export async function loadPatientsFromFirestore(userId) {
+  if (!db || !userId) return [];
   try {
-    const querySnapshot = await getDocs(collection(db, 'patients'));
+    const querySnapshot = await getDocs(collection(db, 'users', userId, 'patients'));
     const list = [];
     querySnapshot.forEach((doc) => {
       list.push(doc.data());

@@ -4,7 +4,10 @@ import {
   isFirebaseEnabled, 
   savePatientToFirestore, 
   deletePatientFromFirestore, 
-  loadPatientsFromFirestore 
+  loadPatientsFromFirestore,
+  auth,
+  signOut,
+  onAuthStateChanged
 } from './firebase';
 import Dashboard from './components/Dashboard';
 import MchatModule from './components/MchatModule';
@@ -13,7 +16,8 @@ import BambiModule from './components/BambiModule';
 import ComunicaTeaModule from './components/ComunicaTeaModule';
 import ReportModule from './components/ReportModule';
 import TherapistSettings from './components/TherapistSettings';
-import { Sun, Moon, Compass, Heart, Award, Settings } from 'lucide-react';
+import Login from './components/Login';
+import { Sun, Moon, Compass, Heart, Award, Settings, LogOut } from 'lucide-react';
 
 export default function App() {
   const [patients, setPatients] = useState([]);
@@ -24,29 +28,85 @@ export default function App() {
   const [therapistSettings, setTherapistSettings] = useState(null);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
 
-  // Carrega pacientes iniciais de forma híbrida (Firestore ou localStorage)
+  // Estados de Autenticação
+  const [currentUser, setCurrentUser] = useState(null);
+  const [isGuestMode, setIsGuestMode] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  // Escuta a autenticação do Firebase e sincroniza pacientes isolados por UID
   useEffect(() => {
-    async function initData() {
-      if (isFirebaseEnabled()) {
-        const firestoreList = await loadPatientsFromFirestore();
+    if (!isFirebaseEnabled()) {
+      setAuthLoading(false);
+      return;
+    }
+
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setAuthLoading(true);
+      if (user) {
+        setCurrentUser(user);
+        setIsGuestMode(false);
+        
+        // Carrega dados específicos desse usuário
+        const firestoreList = await loadPatientsFromFirestore(user.uid);
+        
         if (firestoreList && firestoreList.length > 0) {
           setPatients(firestoreList);
-          localStorage.setItem('teafono_patients', JSON.stringify(firestoreList));
-          return;
+          localStorage.setItem(`teafono_patients_${user.uid}`, JSON.stringify(firestoreList));
+          
+          // Mantém seleção ativa se houver
+          const selected = firestoreList.find(p => p.isSelected);
+          if (selected) setActivePatient(selected);
+        } else {
+          // Se a nuvem estiver vazia, verifica se existem dados locais legados no localStorage
+          const localStored = localStorage.getItem('teafono_patients');
+          if (localStored) {
+            const parsed = JSON.parse(localStored);
+            if (parsed.length > 0 && window.confirm("Detectamos fichas de pacientes criadas localmente neste navegador. Deseja sincronizá-las e salvá-las na sua conta em nuvem?")) {
+              setPatients(parsed);
+              localStorage.setItem(`teafono_patients_${user.uid}`, JSON.stringify(parsed));
+              parsed.forEach(async (pat) => {
+                await savePatientToFirestore(pat, user.uid);
+              });
+              // Remove do cache de convidado para evitar duplicidade
+              localStorage.removeItem('teafono_patients');
+            } else {
+              setPatients([]);
+            }
+          } else {
+            setPatients([]);
+          }
+        }
+      } else {
+        setCurrentUser(null);
+        if (!isGuestMode) {
+          setPatients([]);
+          setActivePatient(null);
         }
       }
+      setAuthLoading(false);
+    });
 
+    return () => unsubscribe();
+  }, [isGuestMode]);
+
+  // Carrega dados no Modo Convidado
+  useEffect(() => {
+    if (isGuestMode || !isFirebaseEnabled()) {
       const stored = localStorage.getItem('teafono_patients');
       if (stored) {
-        setPatients(JSON.parse(stored));
+        const parsed = JSON.parse(stored);
+        setPatients(parsed);
+        const selected = parsed.find(p => p.isSelected);
+        if (selected) setActivePatient(selected);
       } else {
         localStorage.setItem('teafono_patients', JSON.stringify(mockTeaPatients));
         setPatients(mockTeaPatients);
+        setActivePatient(mockTeaPatients[0]);
       }
     }
+  }, [isGuestMode]);
 
-    initData();
-
+  useEffect(() => {
     const storedSettings = localStorage.getItem('teafono_therapist_settings');
     if (storedSettings) {
       setTherapistSettings(JSON.parse(storedSettings));
@@ -73,13 +133,16 @@ export default function App() {
 
   const savePatientsToStorage = (updatedList) => {
     setPatients(updatedList);
-    localStorage.setItem('teafono_patients', JSON.stringify(updatedList));
-
-    // Sincronização em segundo plano no Firestore
-    if (isFirebaseEnabled()) {
-      updatedList.forEach(async (patient) => {
-        await savePatientToFirestore(patient);
-      });
+    
+    if (currentUser) {
+      localStorage.setItem(`teafono_patients_${currentUser.uid}`, JSON.stringify(updatedList));
+      if (isFirebaseEnabled()) {
+        updatedList.forEach(async (patient) => {
+          await savePatientToFirestore(patient, currentUser.uid);
+        });
+      }
+    } else {
+      localStorage.setItem('teafono_patients', JSON.stringify(updatedList));
     }
   };
 
@@ -92,7 +155,6 @@ export default function App() {
     savePatientsToStorage(updated);
   };
 
-  // Cadastro livre de race conditions
   const handleAddPatient = (newPatData) => {
     const newPat = {
       id: 'tp_' + Date.now(),
@@ -120,9 +182,8 @@ export default function App() {
       }
       savePatientsToStorage(updated);
 
-      // Deleta do Firestore
-      if (isFirebaseEnabled()) {
-        deletePatientFromFirestore(id);
+      if (isFirebaseEnabled() && currentUser) {
+        deletePatientFromFirestore(id, currentUser.uid);
       }
     }
   };
@@ -170,6 +231,20 @@ export default function App() {
       }
       savePatientsToStorage(resetList);
     }
+  };
+
+  const handleLogout = async () => {
+    if (isFirebaseEnabled()) {
+      try {
+        await signOut(auth);
+      } catch (err) {
+        console.error("Erro ao deslogar:", err);
+      }
+    }
+    setIsGuestMode(false);
+    setCurrentUser(null);
+    setPatients([]);
+    setActivePatient(null);
   };
 
   const handleStartAssessment = (moduleName) => {
@@ -223,6 +298,29 @@ export default function App() {
     setActiveScreen('caa');
   };
 
+  if (authLoading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        width: '100%',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        background: '#0b0f19',
+        color: '#fff',
+        flexDirection: 'column',
+        gap: '1rem'
+      }}>
+        <div className="animate-spin" style={{ width: '40px', height: '40px', border: '4px solid var(--secondary-color)', borderTopColor: 'transparent', borderRadius: '50%' }} />
+        <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Carregando dados com segurança...</span>
+      </div>
+    );
+  }
+
+  if (!currentUser && !isGuestMode) {
+    return <Login onGuestAccess={() => setIsGuestMode(true)} />;
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', width: '100%' }}>
       {/* Header Fixo */}
@@ -233,6 +331,16 @@ export default function App() {
         </div>
 
         <div className="header-actions">
+          {currentUser && (
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.35rem', borderRight: '1px solid var(--border-color)', paddingRight: '0.75rem', marginRight: '0.25rem' }}>
+              Olá, <strong>{currentUser.displayName || currentUser.email}</strong>
+            </span>
+          )}
+          {isGuestMode && (
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem', borderRight: '1px solid var(--border-color)', paddingRight: '0.75rem', marginRight: '0.25rem' }}>
+              Modo Convidado (Local)
+            </span>
+          )}
           {activePatient && activeScreen === 'dashboard' && (
             <button className="btn btn-secondary" onClick={handleGoToCaa} style={{ borderColor: 'var(--secondary-color)', color: 'var(--secondary-color)' }}>
               🗣️ Comunicação Alternativa
@@ -244,6 +352,11 @@ export default function App() {
           <button className="btn btn-secondary btn-icon" onClick={toggleTheme} title="Alternar tema">
             {isLightMode ? <Moon size={18} /> : <Sun size={18} />}
           </button>
+          {(currentUser || isGuestMode) && (
+            <button className="btn btn-secondary btn-icon" onClick={handleLogout} title="Sair da Conta" style={{ color: 'var(--danger-color)', borderColor: 'rgba(239, 68, 68, 0.15)' }}>
+              <LogOut size={18} />
+            </button>
+          )}
         </div>
       </header>
 
