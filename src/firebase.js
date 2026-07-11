@@ -16,14 +16,13 @@ import {
   onAuthStateChanged
 } from 'firebase/auth';
 
-// Lê chaves do Vite env (.env) ou usa as credenciais padrão do seu projeto do Firebase
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyDK5T3chBAm2q4V4MzLYW1rJ28NRjn4k2Y",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "teafono-b4ef8.firebaseapp.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "teafono-b4ef8",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "teafono-b4ef8.firebasestorage.app",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "12884130779",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:12884130779:web:4a860183e31671c7a585fe"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 let app = null;

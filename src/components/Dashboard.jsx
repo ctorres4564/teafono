@@ -1,5 +1,81 @@
-import React, { useState } from 'react';
-import { User, Calendar, Plus, ChevronRight, Trash2, Search, Download, Upload } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, Calendar, Plus, ChevronRight, Trash2, Search, Download, Upload, TrendingUp, BarChart3, Activity } from 'lucide-react';
+
+const calculateAge = (birthDateString) => {
+  if (!birthDateString) return '';
+  const today = new Date();
+  const birthDate = new Date(birthDateString + 'T00:00:00');
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age < 0 ? 0 : age;
+};
+
+function PragmaticsChart({ history }) {
+  const [ChartComponents, setChartComponents] = useState(null);
+
+  useEffect(() => {
+    import('recharts').then(mod => {
+      setChartComponents(mod);
+    });
+  }, []);
+
+  if (!ChartComponents) {
+    return <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>Carregando gráfico...</div>;
+  }
+
+  const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, BarChart, Bar } = ChartComponents;
+
+  const data = history.map(h => ({
+    date: new Date(h.date).toLocaleDateString('pt-BR'),
+    rate: h.results.pragmatics.ratePerMinute,
+    total: h.results.pragmatics.totalActs,
+    verbal: h.results.pragmatics.means.verbal.percent,
+    vocal: h.results.pragmatics.means.vocal.percent,
+    gestual: h.results.pragmatics.means.gestual.percent,
+  }));
+
+  if (data.length < 2) return null;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '0.5rem' }}>
+      <div className="glass-panel" style={{ padding: '1rem' }}>
+        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+          <Activity size={14} /> Frequência Comunicativa (atos/min)
+        </span>
+        <ResponsiveContainer width="100%" height={150}>
+          <LineChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+            <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+            <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+            <Tooltip contentStyle={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', fontSize: '12px' }} />
+            <Line type="monotone" dataKey="rate" stroke="#8b5cf6" strokeWidth={2} dot={{ fill: '#8b5cf6', r: 4 }} name="Atos/min" />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div className="glass-panel" style={{ padding: '1rem' }}>
+        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+          <BarChart3 size={14} /> Distribuição dos Meios (%)
+        </span>
+        <ResponsiveContainer width="100%" height={150}>
+          <BarChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+            <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+            <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+            <Tooltip contentStyle={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', fontSize: '12px' }} />
+            <Legend wrapperStyle={{ fontSize: '10px' }} />
+            <Bar dataKey="verbal" fill="#10b981" name="Verbal" stackId="a" />
+            <Bar dataKey="vocal" fill="#f59e0b" name="Vocal" stackId="a" />
+            <Bar dataKey="gestual" fill="#3b82f6" name="Gestual" stackId="a" />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
 
 export default function Dashboard({ patients, onSelectPatient, onAddPatient, onDeletePatient, onUpdatePatient, onImportBackup, onStartAssessment, onViewReport, onGoToCaa }) {
   const [showAddForm, setShowAddForm] = useState(false);
@@ -10,7 +86,6 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
   const [newBirthDate, setNewBirthDate] = useState('');
   const [newSpeechComplaint, setNewSpeechComplaint] = useState('');
 
-  // Estados de Edição e Busca
   const [searchTerm, setSearchTerm] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState('');
@@ -19,18 +94,6 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
   const [editGender, setEditGender] = useState('Masculino');
   const [editDiagnosis, setEditDiagnosis] = useState('');
   const [editSpeechComplaint, setEditSpeechComplaint] = useState('');
-
-  const calculateAge = (birthDateString) => {
-    if (!birthDateString) return '';
-    const today = new Date();
-    const birthDate = new Date(birthDateString);
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const m = today.getMonth() - birthDate.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    return age < 0 ? 0 : age;
-  };
 
   const handleBirthDateChange = (dateVal) => {
     setNewBirthDate(dateVal);
@@ -41,23 +104,11 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!newName || !newAge) return;
-
     onAddPatient({
-      name: newName,
-      age: Number(newAge),
-      gender: newGender,
-      diagnosis: newDiagnosis,
-      birthDate: newBirthDate,
-      speechComplaint: newSpeechComplaint
+      name: newName, age: Number(newAge), gender: newGender,
+      diagnosis: newDiagnosis, birthDate: newBirthDate, speechComplaint: newSpeechComplaint
     });
-
-    setNewName('');
-    setNewAge('');
-    setNewGender('Masculino');
-    setNewDiagnosis('');
-    setNewBirthDate('');
-    setNewSpeechComplaint('');
-    setShowAddForm(false);
+    setNewName(''); setNewAge(''); setNewGender('Masculino'); setNewDiagnosis(''); setNewBirthDate(''); setNewSpeechComplaint(''); setShowAddForm(false);
   };
 
   const startEditing = () => {
@@ -80,17 +131,10 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
   const handleEditSubmit = (e) => {
     e.preventDefault();
     if (!editName || !editAge) return;
-
     onUpdatePatient({
-      id: selectedPatient.id,
-      name: editName,
-      age: Number(editAge),
-      gender: editGender,
-      diagnosis: editDiagnosis,
-      birthDate: editBirthDate,
-      speechComplaint: editSpeechComplaint
+      id: selectedPatient.id, name: editName, age: Number(editAge),
+      gender: editGender, diagnosis: editDiagnosis, birthDate: editBirthDate, speechComplaint: editSpeechComplaint
     });
-
     setIsEditing(false);
   };
 
@@ -126,17 +170,15 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
 
   const filteredPatients = patients.filter(p => {
     const term = searchTerm.toLowerCase();
-    const matchName = p.name?.toLowerCase().includes(term);
-    const matchDiagnosis = p.diagnosis?.toLowerCase().includes(term);
-    const matchComplaint = p.speechComplaint?.toLowerCase().includes(term);
-    return matchName || matchDiagnosis || matchComplaint;
+    return p.name?.toLowerCase().includes(term) ||
+      p.diagnosis?.toLowerCase().includes(term) ||
+      p.speechComplaint?.toLowerCase().includes(term);
   });
 
   const selectedPatient = patients.find(p => p.isSelected);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', width: '100%' }}>
-      {/* Welcome Banner */}
       <div className="glass-panel card" style={{ padding: '2rem', background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%)' }}>
         <h2 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '0.5rem' }}>Portal Fonoaudiológico de TEA</h2>
         <p style={{ color: 'var(--text-secondary)' }}>
@@ -145,11 +187,10 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '2rem' }}>
-        {/* Patients Column */}
         <div className="glass-panel card" style={{ padding: '1.5rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
             <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <User size={20} className="text-primary" /> Fichas Clínicas (Crianças)
+              <User size={20} className="text-primary" /> Fichas Clínicas
             </h3>
             <button className="btn btn-primary" onClick={() => setShowAddForm(!showAddForm)}>
               <Plus size={16} /> Nova Ficha
@@ -159,21 +200,8 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', flexDirection: 'column' }}>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <Search size={16} style={{ position: 'absolute', left: '12px', color: 'var(--text-muted)' }} />
-              <input 
-                type="text" 
-                placeholder="Buscar por nome ou diagnóstico..." 
-                value={searchTerm} 
-                onChange={e => setSearchTerm(e.target.value)} 
-                style={{ 
-                  width: '100%', 
-                  padding: '0.65rem 0.65rem 0.65rem 2.25rem', 
-                  borderRadius: '8px', 
-                  background: 'rgba(255,255,255,0.03)', 
-                  border: '1px solid var(--border-color)', 
-                  color: 'var(--text-primary)', 
-                  fontSize: '0.85rem' 
-                }}
-              />
+              <input type="text" placeholder="Buscar por nome ou diagnóstico..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+                style={{ width: '100%', padding: '0.65rem 0.65rem 0.65rem 2.25rem', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '0.85rem' }} />
             </div>
           </div>
 
@@ -204,28 +232,14 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
                   </select>
                 </div>
                 <div className="form-group">
-                  <label>Diagnóstico / Nível de Suporte (se houver)</label>
+                  <label>Diagnóstico / Nível de Suporte</label>
                   <input type="text" value={newDiagnosis} onChange={e => setNewDiagnosis(e.target.value)} placeholder="Ex: TEA Nível 1 de Suporte" />
                 </div>
               </div>
               <div className="form-group">
                 <label>Queixa Fonoaudiológica</label>
-                <textarea 
-                  value={newSpeechComplaint} 
-                  onChange={e => setNewSpeechComplaint(e.target.value)} 
-                  placeholder="Ex: Atraso de fala, dificuldade na mastigação, etc." 
-                  rows={2}
-                  style={{ 
-                    width: '100%', 
-                    padding: '0.65rem 0.8rem', 
-                    borderRadius: '8px', 
-                    background: 'rgba(255,255,255,0.03)', 
-                    border: '1px solid var(--border-color)', 
-                    color: 'var(--text-primary)', 
-                    fontSize: '0.9rem',
-                    resize: 'vertical'
-                  }}
-                />
+                <textarea value={newSpeechComplaint} onChange={e => setNewSpeechComplaint(e.target.value)} placeholder="Ex: Atraso de fala, dificuldade na mastigação, etc." rows={2}
+                  style={{ width: '100%', padding: '0.65rem 0.8rem', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '0.9rem', resize: 'vertical' }} />
               </div>
               <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
                 <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Cadastrar</button>
@@ -241,24 +255,9 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
               </p>
             ) : (
               filteredPatients.map(p => (
-                <div 
-                  key={p.id}
-                  className="glass-panel"
-                  style={{
-                    padding: '1rem',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    borderLeft: p.isSelected ? '4px solid var(--secondary-color)' : '4px solid transparent',
-                    background: p.isSelected ? 'rgba(139, 92, 246, 0.05)' : 'rgba(255,255,255,0.01)',
-                    marginBottom: '0.75rem'
-                  }}
-                  onClick={() => {
-                    setIsEditing(false);
-                    onSelectPatient(p);
-                  }}
-                >
+                <div key={p.id} className="glass-panel"
+                  style={{ padding: '1rem', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderLeft: p.isSelected ? '4px solid var(--secondary-color)' : '4px solid transparent', background: p.isSelected ? 'rgba(139, 92, 246, 0.05)' : 'rgba(255,255,255,0.01)', marginBottom: '0.75rem' }}
+                  onClick={() => { setIsEditing(false); onSelectPatient(p); }}>
                   <div>
                     <h4 style={{ fontWeight: 700, fontSize: '0.95rem' }}>{p.name}</h4>
                     <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
@@ -266,10 +265,7 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
                     </p>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }} onClick={e => e.stopPropagation()}>
-                    <button className="btn btn-secondary btn-icon" onClick={() => {
-                      setIsEditing(false);
-                      onSelectPatient(p);
-                    }} style={{ width: '32px', height: '32px' }}>
+                    <button className="btn btn-secondary btn-icon" onClick={() => { setIsEditing(false); onSelectPatient(p); }} style={{ width: '32px', height: '32px' }}>
                       <ChevronRight size={16} />
                     </button>
                     <button className="btn btn-secondary btn-icon" onClick={() => onDeletePatient(p.id)} style={{ width: '32px', height: '32px', borderColor: 'rgba(239,68,68,0.2)', color: 'var(--danger-color)' }}>
@@ -281,19 +277,17 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
             )}
           </div>
 
-          {/* Seção de Backup */}
           <div style={{ borderTop: '1px solid var(--border-color)', marginTop: '1.5rem', paddingTop: '1rem', display: 'flex', gap: '0.75rem', justifyContent: 'space-between' }}>
-            <button className="btn btn-secondary" onClick={handleExportBackup} style={{ flex: 1, fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', padding: '0.5rem 0.25rem', whiteSpace: 'nowrap' }} title="Salvar todas as fichas no computador">
+            <button className="btn btn-secondary" onClick={handleExportBackup} style={{ flex: 1, fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', padding: '0.5rem 0.25rem', whiteSpace: 'nowrap' }}>
               <Download size={14} /> Exportar Backup
             </button>
-            <label className="btn btn-secondary" style={{ flex: 1, fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', padding: '0.5rem 0.25rem', cursor: 'pointer', whiteSpace: 'nowrap' }} title="Restaurar fichas de um arquivo salvo">
+            <label className="btn btn-secondary" style={{ flex: 1, fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', padding: '0.5rem 0.25rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
               <Upload size={14} /> Importar Backup
               <input type="file" accept=".json" onChange={handleImportBackup} style={{ display: 'none' }} />
             </label>
           </div>
         </div>
 
-        {/* Selected Patient details */}
         <div className="glass-panel card" style={{ padding: '1.5rem' }}>
           <h3 className="card-title" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>Ações Clínicas & Histórico</h3>
 
@@ -302,7 +296,7 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
               <form onSubmit={handleEditSubmit} className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', borderRadius: '12px' }}>
                 <h4 style={{ fontWeight: 700, fontSize: '0.95rem' }}>Editar Dados do Paciente</h4>
                 <div className="form-group">
-                  <label>Nome Completo da Criança</label>
+                  <label>Nome Completo</label>
                   <input type="text" value={editName} onChange={e => setEditName(e.target.value)} required />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -311,7 +305,7 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
                     <input type="date" value={editBirthDate} onChange={e => handleEditBirthDateChange(e.target.value)} required />
                   </div>
                   <div className="form-group">
-                    <label>Idade (anos - calculada)</label>
+                    <label>Idade (anos)</label>
                     <input type="number" value={editAge} onChange={e => setEditAge(e.target.value)} required readOnly style={{ opacity: 0.8, cursor: 'not-allowed' }} />
                   </div>
                 </div>
@@ -325,27 +319,14 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
                     </select>
                   </div>
                   <div className="form-group">
-                    <label>Diagnóstico / Nível de Suporte</label>
+                    <label>Diagnóstico</label>
                     <input type="text" value={editDiagnosis} onChange={e => setEditDiagnosis(e.target.value)} />
                   </div>
                 </div>
                 <div className="form-group">
                   <label>Queixa Fonoaudiológica</label>
-                  <textarea 
-                    value={editSpeechComplaint} 
-                    onChange={e => setEditSpeechComplaint(e.target.value)} 
-                    rows={3}
-                    style={{ 
-                      width: '100%', 
-                      padding: '0.65rem 0.8rem', 
-                      borderRadius: '8px', 
-                      background: 'rgba(255,255,255,0.03)', 
-                      border: '1px solid var(--border-color)', 
-                      color: 'var(--text-primary)', 
-                      fontSize: '0.9rem',
-                      resize: 'vertical'
-                    }}
-                  />
+                  <textarea value={editSpeechComplaint} onChange={e => setEditSpeechComplaint(e.target.value)} rows={3}
+                    style={{ width: '100%', padding: '0.65rem 0.8rem', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '0.9rem', resize: 'vertical' }} />
                 </div>
                 <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
                   <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Salvar Alterações</button>
@@ -358,7 +339,7 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
                     <h4 style={{ fontSize: '1.2rem', fontWeight: 800 }}>{selectedPatient.name}</h4>
                     <button className="btn btn-secondary" onClick={startEditing} style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', minWidth: '100px' }}>
-                      ✏️ Editar Ficha
+                      Editar Ficha
                     </button>
                   </div>
                   <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
@@ -376,124 +357,115 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
                   )}
                 </div>
 
-              {/* Iniciar Avaliações */}
-              <div>
-                <h5 style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>Realizar Avaliações de Autismo</h5>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <button className="btn btn-primary" onClick={() => onStartAssessment('mchat')} style={{ justifyContent: 'flex-start', background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' }}>
-                    📋 Triagem de Sinais Precoces (M-CHAT-R/F)
-                  </button>
-                  <button className="btn btn-primary" onClick={() => onStartAssessment('pragmatics')} style={{ justifyContent: 'flex-start', background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)' }}>
-                    💬 Perfil Funcional de Pragmática (Fernandes)
-                  </button>
-                  <button className="btn btn-primary" onClick={() => onStartAssessment('bambi')} style={{ justifyContent: 'flex-start', background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)' }}>
-                    🍽️ Seletividade Alimentar e Sensorial (BAMBI)
+                <div>
+                  <h5 style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>Realizar Avaliações de Autismo</h5>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <button className="btn btn-primary" onClick={() => onStartAssessment('mchat')} style={{ justifyContent: 'flex-start', background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' }}>
+                      Triagem de Sinais Precoces (M-CHAT-R/F)
+                    </button>
+                    <button className="btn btn-primary" onClick={() => onStartAssessment('pragmatics')} style={{ justifyContent: 'flex-start', background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)' }}>
+                      Perfil Funcional de Pragmática (Fernandes)
+                    </button>
+                    <button className="btn btn-primary" onClick={() => onStartAssessment('bambi')} style={{ justifyContent: 'flex-start', background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)' }}>
+                      Seletividade Alimentar e Sensorial (BAMBI)
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <h5 style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>Intervenção de CAA</h5>
+                  <button className="btn btn-secondary" onClick={onGoToCaa} style={{ width: '100%', borderColor: 'var(--secondary-color)', color: 'var(--secondary-color)', fontWeight: 700 }}>
+                    Abrir Prancha de Comunicação Alternativa
                   </button>
                 </div>
-              </div>
 
-              {/* Intervenção */}
-              <div>
-                <h5 style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>Intervenção de CAA</h5>
-                <button className="btn btn-secondary" onClick={onGoToCaa} style={{ width: '100%', borderColor: 'var(--secondary-color)', color: 'var(--secondary-color)', fontWeight: 700 }}>
-                  🗣️ Abrir Prancha de Comunicação Alternativa
-                </button>
-              </div>
-
-              {/* Histórico */}
-              <div>
-                <h5 style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>Exames Registrados</h5>
-                {(!selectedPatient.history || selectedPatient.history.length === 0) ? (
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Nenhuma avaliação registrada ainda.</p>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '180px', overflowY: 'auto' }}>
-                    {selectedPatient.history.map(hist => (
-                      <div key={hist.id} className="glass-panel" style={{ padding: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', background: 'rgba(255,255,255,0.01)' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                          <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                            <Calendar size={12} /> {new Date(hist.date).toLocaleDateString('pt-BR')}
-                          </span>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.25rem' }}>
-                            {hist.results.mchat && (
-                              <span className="badge badge-danger" style={{ fontSize: '0.65rem' }}>M-CHAT: {hist.results.mchat.risk}</span>
-                            )}
-                            {hist.results.pragmatics && (
-                              <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>Pragmática: {hist.results.pragmatics.ratePerMinute} atos/min</span>
-                            )}
-                            {hist.results.bambi && (
-                              <span className="badge badge-warning" style={{ fontSize: '0.65rem' }}>Alimentação: {hist.results.bambi.score} pts</span>
-                            )}
-                          </div>
-                        </div>
-                        <button className="btn btn-secondary" onClick={() => onViewReport(hist.id)} style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem' }}>
-                          Laudo
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Evolução de Pragmática */}
-              {(() => {
-                const pragmaticsHistory = (selectedPatient.history || [])
-                  .filter(h => h.results && h.results.pragmatics)
-                  .sort((a, b) => new Date(a.date) - new Date(b.date));
-
-                if (pragmaticsHistory.length < 2) return null;
-
-                return (
-                  <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem', marginTop: '0.25rem' }}>
-                    <h5 style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
-                      📈 Evolução da Pragmática
-                    </h5>
-                    <div className="glass-panel" style={{ padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', background: 'rgba(139, 92, 246, 0.02)' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr', gap: '0.5rem', fontSize: '0.75rem', fontWeight: 700, borderBottom: '1px solid var(--border-color)', paddingBottom: '0.25rem', color: 'var(--text-secondary)' }}>
-                        <span>Data</span>
-                        <span>Frequência</span>
-                        <span>Meio Predominante</span>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: '120px', overflowY: 'auto' }}>
-                        {pragmaticsHistory.map((hist, idx) => {
-                          const currentRate = hist.results.pragmatics.ratePerMinute;
-                          const prevRate = idx > 0 ? pragmaticsHistory[idx - 1].results.pragmatics.ratePerMinute : null;
-                          let diffIndicator = null;
-                          if (prevRate !== null) {
-                            const diff = currentRate - prevRate;
-                            if (diff > 0) {
-                              diffIndicator = <span style={{ color: '#10b981', marginLeft: '0.25rem', fontWeight: 700 }}>▲ (+{diff.toFixed(1)})</span>;
-                            } else if (diff < 0) {
-                              diffIndicator = <span style={{ color: '#ef4444', marginLeft: '0.25rem', fontWeight: 700 }}>▼ ({diff.toFixed(1)})</span>;
-                            }
-                          }
-                          return (
-                            <div key={hist.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr', gap: '0.5rem', fontSize: '0.8rem', alignItems: 'center' }}>
-                              <span>{new Date(hist.date).toLocaleDateString('pt-BR')}</span>
-                              <span style={{ fontWeight: 600 }}>
-                                {currentRate}/min
-                                {diffIndicator}
-                              </span>
-                              <span style={{ fontSize: '0.75rem', color: hist.results.pragmatics.predominantMean?.includes('Verbal') ? '#10b981' : 'var(--text-secondary)' }}>
-                                {hist.results.pragmatics.predominantMean}
-                              </span>
+                <div>
+                  <h5 style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>Exames Registrados</h5>
+                  {(!selectedPatient.history || selectedPatient.history.length === 0) ? (
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Nenhuma avaliação registrada ainda.</p>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '180px', overflowY: 'auto' }}>
+                      {selectedPatient.history.map(hist => (
+                        <div key={hist.id} className="glass-panel" style={{ padding: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', background: 'rgba(255,255,255,0.01)' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                            <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                              <Calendar size={12} /> {new Date(hist.date).toLocaleDateString('pt-BR')}
+                            </span>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.25rem' }}>
+                              {hist.results.mchat && (
+                                <span className="badge badge-danger" style={{ fontSize: '0.65rem' }}>M-CHAT: {hist.results.mchat.risk}</span>
+                              )}
+                              {hist.results.pragmatics && (
+                                <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>Pragmática: {hist.results.pragmatics.ratePerMinute} atos/min</span>
+                              )}
+                              {hist.results.bambi && (
+                                <span className="badge badge-warning" style={{ fontSize: '0.65rem' }}>Alimentação: {hist.results.bambi.score} pts</span>
+                              )}
                             </div>
-                          );
-                        })}
+                          </div>
+                          <button className="btn btn-secondary" onClick={() => onViewReport(hist.id)} style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem' }}>
+                            Laudo
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {(() => {
+                  const pragmaticsHistory = (selectedPatient.history || [])
+                    .filter(h => h.results && h.results.pragmatics)
+                    .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                  if (pragmaticsHistory.length < 2) return null;
+
+                  return (
+                    <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem', marginTop: '0.25rem' }}>
+                      <h5 style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <TrendingUp size={14} /> Evolução da Pragmática
+                      </h5>
+                      <PragmaticsChart history={pragmaticsHistory} />
+                      <div className="glass-panel" style={{ padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', background: 'rgba(139, 92, 246, 0.02)', marginTop: '0.5rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr', gap: '0.5rem', fontSize: '0.75rem', fontWeight: 700, borderBottom: '1px solid var(--border-color)', paddingBottom: '0.25rem', color: 'var(--text-secondary)' }}>
+                          <span>Data</span><span>Frequência</span><span>Meio Predominante</span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: '120px', overflowY: 'auto' }}>
+                          {pragmaticsHistory.map((hist, idx) => {
+                            const currentRate = hist.results.pragmatics.ratePerMinute;
+                            const prevRate = idx > 0 ? pragmaticsHistory[idx - 1].results.pragmatics.ratePerMinute : null;
+                            let diffIndicator = null;
+                            if (prevRate !== null) {
+                              const diff = currentRate - prevRate;
+                              if (diff > 0) {
+                                diffIndicator = <span style={{ color: '#10b981', marginLeft: '0.25rem', fontWeight: 700 }}>▲ (+{diff.toFixed(1)})</span>;
+                              } else if (diff < 0) {
+                                diffIndicator = <span style={{ color: '#ef4444', marginLeft: '0.25rem', fontWeight: 700 }}>▼ ({diff.toFixed(1)})</span>;
+                              }
+                            }
+                            return (
+                              <div key={hist.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr', gap: '0.5rem', fontSize: '0.8rem', alignItems: 'center' }}>
+                                <span>{new Date(hist.date).toLocaleDateString('pt-BR')}</span>
+                                <span style={{ fontWeight: 600 }}>{currentRate}/min{diffIndicator}</span>
+                                <span style={{ fontSize: '0.75rem', color: hist.results.pragmatics.predominantMean?.includes('Verbal') ? '#10b981' : 'var(--text-secondary)' }}>
+                                  {hist.results.pragmatics.predominantMean}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })()}
-            </div>
-          )
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, color: 'var(--text-muted)', textAlign: 'center', padding: '2rem' }}>
+                  );
+                })()}
+              </div>
+            )
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, color: 'var(--text-muted)', textAlign: 'center', padding: '2rem' }}>
               <User size={48} style={{ opacity: 0.3, marginBottom: '1rem' }} />
               <p>Selecione um paciente na lista de crianças para iniciar exames ou interagir com o ComunicaTEA.</p>
             </div>
           )}
         </div>
-
       </div>
     </div>
   );
