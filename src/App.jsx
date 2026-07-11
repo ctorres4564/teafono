@@ -17,7 +17,7 @@ import ComunicaTeaModule from './components/ComunicaTeaModule';
 import ReportModule from './components/ReportModule';
 import TherapistSettings from './components/TherapistSettings';
 import Login from './components/Login';
-import { Sun, Moon, Compass, Heart, Award, Settings, LogOut } from 'lucide-react';
+import { Sun, Moon, Heart, Settings, LogOut } from 'lucide-react';
 
 export default function App() {
   const [patients, setPatients] = useState([]);

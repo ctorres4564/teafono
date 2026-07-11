@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { calculatePragmatics } from '../utils/teaEvaluations';
-import { ArrowLeft, Play, Square, RefreshCw, MessageSquare, Volume2 } from 'lucide-react';
+import { ArrowLeft, Play, Square, RefreshCw } from 'lucide-react';
 
 export default function PragmaticsModule({ patient, onBack, onSaveAssessment }) {
   // Contadores locais de atos por meios

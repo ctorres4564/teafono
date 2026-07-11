@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, Printer, Calendar, User, FileText, CheckSquare, Sparkles } from 'lucide-react';
+import { ArrowLeft, Printer, Calendar, Sparkles } from 'lucide-react';
 
 export default function ReportModule({ patient, assessmentId, therapistSettings, onBack }) {
   const assessment = patient.history.find(h => h.id === assessmentId);

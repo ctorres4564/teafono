@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Play, Trash2, Camera, Plus, Check } from 'lucide-react';
+import { ArrowLeft, Play, Trash2, Camera } from 'lucide-react';
 
 export default function ComunicaTeaModule({ patient, onBack }) {
   // Lista inicial de cartões padrão da prancha de CAA (Padrão de Cores Oficial)

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Calendar, Plus, ChevronRight, MessageSquare, Trash2, Heart, Award, ShieldAlert, Search, Download, Upload } from 'lucide-react';
+import { User, Calendar, Plus, ChevronRight, Trash2, Search, Download, Upload } from 'lucide-react';
 
 export default function Dashboard({ patients, onSelectPatient, onAddPatient, onDeletePatient, onUpdatePatient, onImportBackup, onStartAssessment, onViewReport, onGoToCaa }) {
   const [showAddForm, setShowAddForm] = useState(false);
@@ -117,6 +117,7 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
             alert("Formato de arquivo inválido. Certifique-se de que é um backup válido do TeaFono.");
           }
         } catch (err) {
+          console.error("Erro na importação de backup:", err);
           alert("Erro ao ler arquivo. Arquivo corrompido ou formato inválido.");
         }
       };
