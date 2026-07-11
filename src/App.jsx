@@ -12,7 +12,8 @@ import PragmaticsModule from './components/PragmaticsModule';
 import BambiModule from './components/BambiModule';
 import ComunicaTeaModule from './components/ComunicaTeaModule';
 import ReportModule from './components/ReportModule';
-import { Sun, Moon, Compass, Heart, Award } from 'lucide-react';
+import TherapistSettings from './components/TherapistSettings';
+import { Sun, Moon, Compass, Heart, Award, Settings } from 'lucide-react';
 
 export default function App() {
   const [patients, setPatients] = useState([]);
@@ -20,6 +21,8 @@ export default function App() {
   const [activePatient, setActivePatient] = useState(null);
   const [activeReportId, setActiveReportId] = useState(null);
   const [isLightMode, setIsLightMode] = useState(false);
+  const [therapistSettings, setTherapistSettings] = useState(null);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   // Carrega pacientes iniciais de forma híbrida (Firestore ou localStorage)
   useEffect(() => {
@@ -43,6 +46,11 @@ export default function App() {
     }
 
     initData();
+
+    const storedSettings = localStorage.getItem('teafono_therapist_settings');
+    if (storedSettings) {
+      setTherapistSettings(JSON.parse(storedSettings));
+    }
 
     const storedTheme = localStorage.getItem('teafono_theme');
     if (storedTheme === 'light') {
@@ -142,6 +150,28 @@ export default function App() {
     savePatientsToStorage(updated);
   };
 
+  const handleSaveSettings = (settings) => {
+    setTherapistSettings(settings);
+    localStorage.setItem('teafono_therapist_settings', JSON.stringify(settings));
+    setShowSettingsModal(false);
+  };
+
+  const handleImportBackupList = (importedList) => {
+    if (!Array.isArray(importedList)) return;
+    if (window.confirm(`Você está prestes a importar ${importedList.length} fichas de pacientes. Isso substituirá as fichas locais atuais. Deseja continuar?`)) {
+      const resetList = importedList.map((p, idx) => ({
+        ...p,
+        isSelected: idx === 0
+      }));
+      if (resetList.length > 0) {
+        setActivePatient(resetList[0]);
+      } else {
+        setActivePatient(null);
+      }
+      savePatientsToStorage(resetList);
+    }
+  };
+
   const handleStartAssessment = (moduleName) => {
     const currentActive = patients.find(p => p.isSelected);
     if (!currentActive) return;
@@ -208,6 +238,9 @@ export default function App() {
               🗣️ Comunicação Alternativa
             </button>
           )}
+          <button className="btn btn-secondary btn-icon" onClick={() => setShowSettingsModal(true)} title="Configurações do Profissional">
+            <Settings size={18} />
+          </button>
           <button className="btn btn-secondary btn-icon" onClick={toggleTheme} title="Alternar tema">
             {isLightMode ? <Moon size={18} /> : <Sun size={18} />}
           </button>
@@ -223,6 +256,7 @@ export default function App() {
             onAddPatient={handleAddPatient}
             onDeletePatient={handleDeletePatient}
             onUpdatePatient={handleUpdatePatient}
+            onImportBackup={handleImportBackupList}
             onStartAssessment={handleStartAssessment}
             onViewReport={handleViewReport}
             onGoToCaa={handleGoToCaa}
@@ -272,10 +306,19 @@ export default function App() {
           <ReportModule 
             patient={activePatient}
             assessmentId={activeReportId}
+            therapistSettings={therapistSettings}
             onBack={() => setActiveScreen('dashboard')}
           />
         )}
       </main>
+
+      {showSettingsModal && (
+        <TherapistSettings 
+          settings={therapistSettings}
+          onSave={handleSaveSettings}
+          onClose={() => setShowSettingsModal(false)}
+        />
+      )}
     </div>
   );
 }

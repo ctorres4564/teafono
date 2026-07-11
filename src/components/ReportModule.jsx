@@ -1,7 +1,7 @@
 import React from 'react';
 import { ArrowLeft, Printer, Calendar, User, FileText, CheckSquare, Sparkles } from 'lucide-react';
 
-export default function ReportModule({ patient, assessmentId, onBack }) {
+export default function ReportModule({ patient, assessmentId, therapistSettings, onBack }) {
   const assessment = patient.history.find(h => h.id === assessmentId);
 
   if (!assessment) {
@@ -245,8 +245,18 @@ export default function ReportModule({ patient, assessmentId, onBack }) {
             <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Assinatura do Paciente / Responsável</span>
           </div>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ height: '50px' }} />
-            <div style={{ width: '200px', borderTop: '1px solid var(--text-secondary)', margin: '0 auto', marginBottom: '0.25rem' }} />
+            <div style={{ height: '50px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center' }}>
+              {therapistSettings?.name && (
+                <strong style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>{therapistSettings.name}</strong>
+              )}
+              {therapistSettings?.crfa && (
+                <span style={{ fontSize: '0.80rem', color: 'var(--text-secondary)' }}>{therapistSettings.crfa}</span>
+              )}
+              {therapistSettings?.clinicName && (
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{therapistSettings.clinicName}</span>
+              )}
+            </div>
+            <div style={{ width: '200px', borderTop: '1px solid var(--text-secondary)', margin: '0 auto', marginBottom: '0.25rem', marginTop: '0.5rem' }} />
             <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Fonoaudiólogo(a) Responsável</span>
           </div>
         </div>

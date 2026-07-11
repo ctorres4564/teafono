@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { User, Calendar, Plus, ChevronRight, MessageSquare, Trash2, Heart, Award, ShieldAlert } from 'lucide-react';
+import { User, Calendar, Plus, ChevronRight, MessageSquare, Trash2, Heart, Award, ShieldAlert, Search, Download, Upload } from 'lucide-react';
 
-export default function Dashboard({ patients, onSelectPatient, onAddPatient, onDeletePatient, onUpdatePatient, onStartAssessment, onViewReport, onGoToCaa }) {
+export default function Dashboard({ patients, onSelectPatient, onAddPatient, onDeletePatient, onUpdatePatient, onImportBackup, onStartAssessment, onViewReport, onGoToCaa }) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newName, setNewName] = useState('');
   const [newAge, setNewAge] = useState('');
@@ -10,7 +10,8 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
   const [newBirthDate, setNewBirthDate] = useState('');
   const [newSpeechComplaint, setNewSpeechComplaint] = useState('');
 
-  // Estados de Edição
+  // Estados de Edição e Busca
+  const [searchTerm, setSearchTerm] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState('');
   const [editBirthDate, setEditBirthDate] = useState('');
@@ -93,6 +94,43 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
     setIsEditing(false);
   };
 
+  const handleExportBackup = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(patients, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `teafono_backup_${new Date().toISOString().slice(0, 10)}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
+  const handleImportBackup = (e) => {
+    const fileReader = new FileReader();
+    if (e.target.files && e.target.files.length > 0) {
+      fileReader.readAsText(e.target.files[0], "UTF-8");
+      fileReader.onload = (event) => {
+        try {
+          const parsed = JSON.parse(event.target.result);
+          if (Array.isArray(parsed)) {
+            onImportBackup(parsed);
+          } else {
+            alert("Formato de arquivo inválido. Certifique-se de que é um backup válido do TeaFono.");
+          }
+        } catch (err) {
+          alert("Erro ao ler arquivo. Arquivo corrompido ou formato inválido.");
+        }
+      };
+    }
+  };
+
+  const filteredPatients = patients.filter(p => {
+    const term = searchTerm.toLowerCase();
+    const matchName = p.name?.toLowerCase().includes(term);
+    const matchDiagnosis = p.diagnosis?.toLowerCase().includes(term);
+    const matchComplaint = p.speechComplaint?.toLowerCase().includes(term);
+    return matchName || matchDiagnosis || matchComplaint;
+  });
+
   const selectedPatient = patients.find(p => p.isSelected);
 
   return (
@@ -115,6 +153,27 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
             <button className="btn btn-primary" onClick={() => setShowAddForm(!showAddForm)}>
               <Plus size={16} /> Nova Ficha
             </button>
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', flexDirection: 'column' }}>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <Search size={16} style={{ position: 'absolute', left: '12px', color: 'var(--text-muted)' }} />
+              <input 
+                type="text" 
+                placeholder="Buscar por nome ou diagnóstico..." 
+                value={searchTerm} 
+                onChange={e => setSearchTerm(e.target.value)} 
+                style={{ 
+                  width: '100%', 
+                  padding: '0.65rem 0.65rem 0.65rem 2.25rem', 
+                  borderRadius: '8px', 
+                  background: 'rgba(255,255,255,0.03)', 
+                  border: '1px solid var(--border-color)', 
+                  color: 'var(--text-primary)', 
+                  fontSize: '0.85rem' 
+                }}
+              />
+            </div>
           </div>
 
           {showAddForm && (
@@ -175,10 +234,12 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
           )}
 
           <div style={{ maxHeight: '450px', overflowY: 'auto' }}>
-            {patients.length === 0 ? (
-              <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>Nenhuma criança cadastrada.</p>
+            {filteredPatients.length === 0 ? (
+              <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>
+                {patients.length === 0 ? "Nenhuma criança cadastrada." : "Nenhum paciente encontrado."}
+              </p>
             ) : (
-              patients.map(p => (
+              filteredPatients.map(p => (
                 <div 
                   key={p.id}
                   className="glass-panel"
@@ -217,6 +278,17 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
                 </div>
               ))
             )}
+          </div>
+
+          {/* Seção de Backup */}
+          <div style={{ borderTop: '1px solid var(--border-color)', marginTop: '1.5rem', paddingTop: '1rem', display: 'flex', gap: '0.75rem', justifyContent: 'space-between' }}>
+            <button className="btn btn-secondary" onClick={handleExportBackup} style={{ flex: 1, fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', padding: '0.5rem 0.25rem', whiteSpace: 'nowrap' }} title="Salvar todas as fichas no computador">
+              <Download size={14} /> Exportar Backup
+            </button>
+            <label className="btn btn-secondary" style={{ flex: 1, fontSize: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', padding: '0.5rem 0.25rem', cursor: 'pointer', whiteSpace: 'nowrap' }} title="Restaurar fichas de um arquivo salvo">
+              <Upload size={14} /> Importar Backup
+              <input type="file" accept=".json" onChange={handleImportBackup} style={{ display: 'none' }} />
+            </label>
           </div>
         </div>
 
