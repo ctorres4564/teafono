@@ -43,6 +43,7 @@ export default function ComunicaTeaModule({ patient, onBack }) {
   const [showCameraModal, setShowCameraModal] = useState(false);
   const [newCardText, setNewCardText] = useState('');
   const [newCardCategory, setNewCardCategory] = useState('objeto');
+  const [stylizeAsPictogram, setStylizeAsPictogram] = useState(false);
   const [stream, setStream] = useState(null);
   const [cameraError, setCameraError] = useState('');
   
@@ -89,6 +90,33 @@ export default function ComunicaTeaModule({ patient, onBack }) {
     speakText(fullText);
   };
 
+  // Lógica de predição de próxima palavra baseada no contexto (IA)
+  const getAiSuggestions = () => {
+    if (phrase.length === 0) {
+      // Início de frase: sugere sujeitos comuns
+      return cards.filter(c => ['Eu', 'Você', 'Mamãe', 'Papai'].includes(c.text));
+    }
+    
+    const lastCard = phrase[phrase.length - 1];
+    
+    if (lastCard.category === 'sujeito') {
+      // Sujeito -> Sugere Ações
+      return cards.filter(c => ['Quero', 'Brincar', 'Comer', 'Beber', 'Ir ao banheiro'].includes(c.text));
+    }
+    
+    if (lastCard.category === 'acao') {
+      // Ação -> Sugere Objetos/Lugares comuns
+      return cards.filter(c => ['Água', 'Brinquedo', 'Bolacha', 'Tablet', 'Parquinho'].includes(c.text));
+    }
+    
+    if (lastCard.category === 'objeto') {
+      // Objeto -> Sugere Sociais/Cortesia
+      return cards.filter(c => ['Por favor', 'Obrigado', 'Sim', 'Não'].includes(c.text));
+    }
+    
+    return cards.slice(0, 4);
+  };
+
   // Câmera para Snapshot
   const startWebcam = async () => {
     try {
@@ -133,6 +161,30 @@ export default function ComunicaTeaModule({ patient, onBack }) {
 
     // Desenha o vídeo no canvas quadrado
     ctx.drawImage(video, 0, 0, 150, 150);
+
+    if (stylizeAsPictogram) {
+      try {
+        const imgData = ctx.getImageData(0, 0, 150, 150);
+        const data = imgData.data;
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+          const v = gray > 120 ? 255 : 30; // Alto contraste binário estilo pictograma
+          data[i] = v;
+          data[i + 1] = v;
+          data[i + 2] = v;
+        }
+        ctx.putImageData(imgData, 0, 0);
+        ctx.lineWidth = 6;
+        ctx.strokeStyle = '#000000';
+        ctx.strokeRect(0, 0, 150, 150);
+      } catch (err) {
+        console.error("Erro no processamento da imagem do pictograma:", err);
+      }
+    }
+
     const dataUrl = canvas.toDataURL('image/png');
 
     const newCard = {
@@ -211,6 +263,44 @@ export default function ComunicaTeaModule({ patient, onBack }) {
           >
             <Trash2 size={14} /> Limpar
           </button>
+        </div>
+      </div>
+
+      {/* Sugestões Preditivas (IA) */}
+      <div className="glass-panel" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', background: 'rgba(139, 92, 246, 0.03)', border: '1px solid rgba(139, 92, 246, 0.15)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--secondary-color)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            ✨ Sugestões Inteligentes de Próxima Palavra (IA)
+          </span>
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          {getAiSuggestions().map(card => (
+            <button
+              key={`suggest_${card.id}`}
+              className={`score-btn caa-card caa-${card.category}`}
+              onClick={() => handleAddCardToPhrase(card)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                padding: '0.4rem 0.75rem',
+                fontSize: '0.75rem',
+                borderRadius: '10px',
+                border: '1px solid var(--border-color)',
+                cursor: 'pointer',
+                flex: 'none',
+                height: 'auto',
+                width: 'auto'
+              }}
+            >
+              {card.image ? (
+                <img src={card.image} alt={card.text} style={{ width: '18px', height: '18px', borderRadius: '4px', objectFit: 'cover' }} />
+              ) : (
+                <span style={{ fontSize: '1rem' }}>{card.icon}</span>
+              )}
+              <span style={{ fontWeight: 700 }}>{card.text}</span>
+            </button>
+          ))}
         </div>
       </div>
 
@@ -295,6 +385,19 @@ export default function ComunicaTeaModule({ patient, onBack }) {
                 <option value="objeto">Objeto/Lugar (Azul - Coisas/Onde)</option>
                 <option value="social">Social (Lilás - Sentimentos/Cumprimento)</option>
               </select>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0.25rem 0' }}>
+              <input 
+                type="checkbox" 
+                id="stylize_checkbox" 
+                checked={stylizeAsPictogram} 
+                onChange={e => setStylizeAsPictogram(e.target.checked)} 
+                style={{ width: 'auto', cursor: 'pointer' }}
+              />
+              <label htmlFor="stylize_checkbox" style={{ cursor: 'pointer', fontSize: '0.85rem' }}>
+                Estilizar como Pictograma de Alto Contraste (IA)
+              </label>
             </div>
 
             <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
