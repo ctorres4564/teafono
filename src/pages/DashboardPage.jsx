@@ -7,6 +7,7 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const {
     patients,
+    activePatientId,
     selectPatient,
     addPatient,
     deletePatient,
@@ -37,6 +38,7 @@ export default function DashboardPage() {
   return (
     <Dashboard
       patients={patients}
+      activePatientId={activePatientId}
       onSelectPatient={(p) => selectPatient(p)}
       onAddPatient={(data) => addPatient(data)}
       onDeletePatient={(id) => deletePatient(id)}
