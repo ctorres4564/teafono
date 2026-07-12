@@ -1,0 +1,160 @@
+RELATÓRIO DE MODIFICAÇÕES E IMPLEMENTAÇÕES
+============================================
+Projeto: TEAFONO - Clinical Assessment Framework
+Data: Julho 2026
+Base: PLANO MESTRE DE IMPLEMENTAÇÃO v1.0
+
+--------------------------------------------------------
+FASE 1 - DIAGNÓSTICO (Auditoria Completa)
+--------------------------------------------------------
+- Auditados todos os arquivos do projeto (src/components, src/pages, src/store, src/utils)
+- Identificada estrutura atual: React + Vite + Zustand + Firebase + React Router
+- Mapeados módulos existentes: Pragmática, M-CHAT, BAMBI, CAA, Relatórios, Dashboard, Login
+- Identificado que avaliações estavam embutidas em patient.history (sem modelo unificado)
+
+--------------------------------------------------------
+FASE 2 - COMPONENTES REUTILIZÁVEIS (CRIADOS)
+--------------------------------------------------------
+Arquivos criados em src/components/shared/:
+  - AssessmentHeader.jsx     - Cabeçalho padronizado com botão voltar, título e nome do paciente
+  - AssessmentTimer.jsx      - Cronômetro reutilizável com contagem regressiva, áudio e controle
+  - CounterButton.jsx        - Botão de contador com gradiente e label
+  - ProgressBar.jsx          - Barra de distribuição percentual colorida
+  - AssessmentSummary.jsx    - Painel de resumo com indicadores em tempo real
+  - ScoringButtons.jsx       - Botões de seleção de pontuação
+  - FunctionCounter.jsx      - Botão de contagem de funções comunicativas
+
+Arquivos modificados:
+  - src/components/PragmaticsModule.jsx - Refatorado para usar os componentes compartilhados
+
+--------------------------------------------------------
+FASE 3 - MODELO UNIFICADO DE AVALIAÇÕES (CRIADO)
+--------------------------------------------------------
+Arquivos criados em src/store/assessments/:
+  - assessmentModel.js       - Modelo padronizado: id, patientId, type, status, createdAt, updatedAt,
+                              completedAt, results, clinicalNotes, version, context
+  - assessmentRegistry.js    - Registro central de todos os instrumentos com metadados
+                              (nome, ícone, cor, rota, descrição) para Pragmática, M-CHAT, BAMBI,
+                              Vocabulário, Fluência Verbal, Fluência da Fala e Fonologia
+
+--------------------------------------------------------
+FASE 4 - NOVA PERSISTÊNCIA (CRIADA)
+--------------------------------------------------------
+Arquivos criados:
+  - src/store/assessments/assessmentStore.js - Store independente para avaliações com:
+    - CRUD completo (addAssessment, updateAssessment, saveResults, deleteAssessment)
+    - loadAssessments por paciente
+    - Migração automática de dados legados do patient.history
+    - persistToPatient para compatibilidade reversa
+
+--------------------------------------------------------
+FASE 5 - MÓDULO DE VOCABULÁRIO (NOVO)
+--------------------------------------------------------
+Arquivos criados:
+  - src/store/assessments/items/vocabularyItems.js - Itens do instrumento:
+    - 10 categorias: Animais, Alimentos, Profissões, Brinquedos, Transportes, Objetos, Roupas,
+                     Verbos, Natureza, Escola
+    - 3 modalidades: Expressivo, Receptivo, Evocação
+    - 7 tipos de resposta: Correta, Subst. Semântica, Subst. Fonológica, Circunlóquio,
+                          Sem resposta, Uso de pista
+  - src/components/VocabularyModule.jsx - Interface completa com seleção de categoria,
+    modalidade, registro de respostas e observações clínicas
+  - src/pages/VocabularyPage.jsx - Página do módulo
+
+--------------------------------------------------------
+FASE 6 - MÓDULO DE FLUÊNCIA (NOVO)
+--------------------------------------------------------
+Arquivos criados:
+  - src/store/assessments/items/fluencyItems.js - Itens do instrumento:
+    - Fluência Verbal: 3 categorias com dicas, cronômetro de 1 minuto
+    - Fluência da Fala: 7 tipos de descontinuidade (repetição, prolongamento, bloqueio,
+                        pausa, intrusão, revisão, perseveração)
+    - 9 campos de transcrição e contagem
+  - src/components/FluencyModule.jsx - Interface dupla (verbal/fala) com:
+    - Seleção de modo por parâmetro de rota
+    - Cronômetro integrado
+    - Contadores incrementais com botões +/- e input manual
+    - Campo de transcrição
+    - Cálculo automático de taxa (palavras/min ou descontinuidades/min)
+    - Diversidade lexical (palavras únicas / total * 100)
+  - src/pages/FluencyPage.jsx - Página do módulo (rota: /fluency/:patientId/:mode)
+
+--------------------------------------------------------
+FASE 7 - MÓDULO DE FONOLOGIA (NOVO)
+--------------------------------------------------------
+Arquivos criados:
+  - src/store/assessments/items/phonologyItems.js - Itens do instrumento:
+    - 20 palavras-alvo para nomeação
+    - 19 consoantes do Português Brasileiro com símbolos IPA e exemplos
+    - Função calculatePCCR com classificação automática
+  - src/components/PhonologyModule.jsx - Interface completa com:
+    - Seleção de palavra via botões
+    - Transcrição fonética por palavra
+    - Classificação individual de cada consoante (Correta/Omitida/Substituída/Distorcida)
+    - Cálculo automático do PCC-R
+    - Classificação: Dentro do esperado / Leve / Moderada / Grave alteração
+  - src/pages/PhonologyPage.jsx - Página do módulo
+
+--------------------------------------------------------
+FASE 8 - RELATÓRIOS E DASHBOARD (MODIFICADOS)
+--------------------------------------------------------
+Arquivos modificados:
+  - src/components/Dashboard.jsx:
+    - Adicionados botões para Vocabulário, Fluência Verbal, Fluência da Fala e Fonologia
+    - Badges de histórico para todos os novos módulos
+  - src/pages/DashboardPage.jsx:
+    - Mapeamento de rotas para os novos módulos
+  - src/components/ReportModule.jsx:
+    - Seções de relatório visual para Vocabulário, Fluência Verbal, Fluência da Fala e Fonologia
+    - Exportação PDF com todos os novos instrumentos
+  - src/App.jsx:
+    - Rotas adicionadas: /vocabulary/:patientId, /fluency/:patientId/:mode, /phonology/:patientId
+
+--------------------------------------------------------
+FASE 9 - TESTES E VALIDAÇÃO
+--------------------------------------------------------
+- Testes unitários: 19/19 testes passando (npm run test)
+- Lint: 0 erros, apenas warnings preexistentes (npm run lint)
+- Build: Compilação bem-sucedida (npm run build)
+
+--------------------------------------------------------
+RESUMO DE ARQUIVOS
+--------------------------------------------------------
+Criados: 15 arquivos
+  - src/components/shared/AssessmentHeader.jsx
+  - src/components/shared/AssessmentTimer.jsx
+  - src/components/shared/CounterButton.jsx
+  - src/components/shared/ProgressBar.jsx
+  - src/components/shared/AssessmentSummary.jsx
+  - src/components/shared/ScoringButtons.jsx
+  - src/components/shared/FunctionCounter.jsx
+  - src/store/assessments/assessmentModel.js
+  - src/store/assessments/assessmentRegistry.js
+  - src/store/assessments/assessmentStore.js
+  - src/store/assessments/items/vocabularyItems.js
+  - src/store/assessments/items/fluencyItems.js
+  - src/store/assessments/items/phonologyItems.js
+  - src/components/VocabularyModule.jsx
+  - src/components/FluencyModule.jsx
+  - src/components/PhonologyModule.jsx
+  - src/pages/VocabularyPage.jsx
+  - src/pages/FluencyPage.jsx
+  - src/pages/PhonologyPage.jsx
+
+Modificados: 5 arquivos
+  - src/components/PragmaticsModule.jsx
+  - src/components/Dashboard.jsx
+  - src/pages/DashboardPage.jsx
+  - src/components/ReportModule.jsx
+  - src/App.jsx
+
+--------------------------------------------------------
+FUNCIONALIDADES PRESERVADAS (Conforme Plano Mestre)
+--------------------------------------------------------
+- Identidade visual inalterada
+- M-CHAT: funcionamento original preservado
+- Follow-Up: inalterado
+- BAMBI: inalterado
+- CAA (ComunicaTEA): inalterado
+- Compatibilidade com pacientes cadastrados: mantida
+- Nenhuma funcionalidade existente removida

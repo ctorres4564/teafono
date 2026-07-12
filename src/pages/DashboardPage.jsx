@@ -18,7 +18,24 @@ export default function DashboardPage() {
   const handleStartAssessment = (moduleName) => {
     const active = useStore.getState().getActivePatient();
     if (!active) return;
-    navigate(`/${moduleName}/${active.id}`);
+
+    const routeMap = {
+      anamnese: 'anamnese',
+      mchat: 'mchat',
+      pragmatics: 'pragmatics',
+      bambi: 'bambi',
+      vocabulary: 'vocabulary',
+      fluency_verbal: 'fluency/verbal',
+      fluency_speech: 'fluency/speech',
+      phonology: 'phonology',
+    };
+
+    const route = routeMap[moduleName];
+    if (route) {
+      navigate(`/${route}/${active.id}`);
+    } else {
+      navigate(`/${moduleName}/${active.id}`);
+    }
   };
 
   const handleViewReport = (reportId) => {

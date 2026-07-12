@@ -7,9 +7,13 @@ import DashboardPage from './pages/DashboardPage';
 import MchatPage from './pages/MchatPage';
 import FollowUpPage from './pages/FollowUpPage';
 import PragmaticsPage from './pages/PragmaticsPage';
+import AnamnesePage from './pages/AnamnesePage';
 import BambiPage from './pages/BambiPage';
 import CaaPage from './pages/CaaPage';
 import ReportPage from './pages/ReportPage';
+import VocabularyPage from './pages/VocabularyPage';
+import FluencyPage from './pages/FluencyPage';
+import PhonologyPage from './pages/PhonologyPage';
 
 function AuthGuard({ children }) {
   const { currentUser, isGuestMode, authLoading } = useStore();
@@ -76,9 +80,13 @@ export default function App() {
           <Route path="/mchat/:patientId" element={<MchatPage />} />
           <Route path="/followup/:patientId" element={<FollowUpPage />} />
           <Route path="/pragmatics/:patientId" element={<PragmaticsPage />} />
+          <Route path="/anamnese/:patientId" element={<AnamnesePage />} />
           <Route path="/bambi/:patientId" element={<BambiPage />} />
           <Route path="/caa/:patientId" element={<CaaPage />} />
           <Route path="/report/:patientId/:reportId" element={<ReportPage />} />
+          <Route path="/vocabulary/:patientId" element={<VocabularyPage />} />
+          <Route path="/fluency/:patientId/:mode" element={<FluencyPage />} />
+          <Route path="/phonology/:patientId" element={<PhonologyPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

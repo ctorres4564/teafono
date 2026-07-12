@@ -357,20 +357,35 @@ export default function Dashboard({ patients, activePatientId, onSelectPatient, 
                   )}
                 </div>
 
-                <div>
-                  <h5 style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>Realizar Avaliações de Autismo</h5>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    <button className="btn btn-primary" onClick={() => onStartAssessment('mchat')} style={{ justifyContent: 'flex-start', background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' }}>
-                      Triagem de Sinais Precoces (M-CHAT-R/F)
-                    </button>
-                    <button className="btn btn-primary" onClick={() => onStartAssessment('pragmatics')} style={{ justifyContent: 'flex-start', background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)' }}>
-                      Perfil Funcional de Pragmática (Fernandes)
-                    </button>
-                    <button className="btn btn-primary" onClick={() => onStartAssessment('bambi')} style={{ justifyContent: 'flex-start', background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)' }}>
-                      Seletividade Alimentar e Sensorial (BAMBI)
-                    </button>
+                  <div>
+                    <h5 style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>Avaliações Fonoaudiológicas</h5>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <button className="btn btn-primary" onClick={() => onStartAssessment('anamnese')} style={{ justifyContent: 'flex-start', background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' }}>
+                        Anamnese Fonoaudiológica
+                      </button>
+                      <button className="btn btn-primary" onClick={() => onStartAssessment('mchat')} style={{ justifyContent: 'flex-start', background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' }}>
+                        Triagem de Sinais Precoces (M-CHAT-R/F)
+                      </button>
+                      <button className="btn btn-primary" onClick={() => onStartAssessment('pragmatics')} style={{ justifyContent: 'flex-start', background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)' }}>
+                        Perfil Funcional de Pragmática (Fernandes)
+                      </button>
+                      <button className="btn btn-primary" onClick={() => onStartAssessment('bambi')} style={{ justifyContent: 'flex-start', background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)' }}>
+                        Seletividade Alimentar e Sensorial (BAMBI)
+                      </button>
+                      <button className="btn btn-primary" onClick={() => onStartAssessment('vocabulary')} style={{ justifyContent: 'flex-start', background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' }}>
+                        Avaliação de Vocabulário
+                      </button>
+                      <button className="btn btn-primary" onClick={() => onStartAssessment('fluency_verbal')} style={{ justifyContent: 'flex-start', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}>
+                        Fluência Verbal
+                      </button>
+                      <button className="btn btn-primary" onClick={() => onStartAssessment('fluency_speech')} style={{ justifyContent: 'flex-start', background: 'linear-gradient(135deg, #14b8a6 0%, #0d9488 100%)' }}>
+                        Fluência da Fala
+                      </button>
+                      <button className="btn btn-primary" onClick={() => onStartAssessment('phonology')} style={{ justifyContent: 'flex-start', background: 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)' }}>
+                        Avaliação Fonológica (PCC-R)
+                      </button>
+                    </div>
                   </div>
-                </div>
 
                 <div>
                   <h5 style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>Intervenção de CAA</h5>
@@ -392,6 +407,9 @@ export default function Dashboard({ patients, activePatientId, onSelectPatient, 
                               <Calendar size={12} /> {new Date(hist.date).toLocaleDateString('pt-BR')}
                             </span>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.25rem' }}>
+                              {hist.results.anamnese && (
+                                <span className="badge badge-info" style={{ fontSize: '0.65rem', background: '#6366f1', color: '#fff' }}>Anamnese</span>
+                              )}
                               {hist.results.mchat && (
                                 <span className="badge badge-danger" style={{ fontSize: '0.65rem' }}>M-CHAT: {hist.results.mchat.risk}</span>
                               )}
@@ -400,6 +418,18 @@ export default function Dashboard({ patients, activePatientId, onSelectPatient, 
                               )}
                               {hist.results.bambi && (
                                 <span className="badge badge-warning" style={{ fontSize: '0.65rem' }}>Alimentação: {hist.results.bambi.score} pts</span>
+                              )}
+                              {hist.results.vocabulary && (
+                                <span className="badge badge-warning" style={{ fontSize: '0.65rem' }}>Vocabulário: {hist.results.vocabulary.summary?.correct || 0} corretas</span>
+                              )}
+                              {hist.results.fluency_verbal && (
+                                <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>Fluência Verbal: {hist.results.fluency_verbal.summary?.ratePerMinute || 0} pal/min</span>
+                              )}
+                              {hist.results.fluency_speech && (
+                                <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>Fluência Fala: {hist.results.fluency_speech.summary?.totalDisfluencies || 0} disfluências</span>
+                              )}
+                              {hist.results.phonology && (
+                                <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>Fonologia: PCC-R {hist.results.phonology.pccr?.percentage || 0}%</span>
                               )}
                             </div>
                           </div>

@@ -25,6 +25,9 @@ dist-ssr
 
 .vercel
 
+# Firebase service account keys (keep out of version control)
+*firebase-adminsdk*
+
 # Environment variables
 .env
 .env.local

@@ -87,6 +87,42 @@ export default function ReportModule({ patient, assessmentId, therapistSettings,
         doc.setFontSize(10);
         doc.text(`Severidade: ${results.bambi.severity}  |  Score: ${results.bambi.score}/90`, margin, y); y += 15;
       }
+
+      if (results.vocabulary) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(12);
+        doc.text('4. Vocabulario', margin, y); y += 7;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.text(`Total de respostas: ${results.vocabulary.summary?.total || 0}  |  Corretas: ${results.vocabulary.summary?.correct || 0}`, margin, y); y += 15;
+      }
+
+      if (results.fluency_verbal) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(12);
+        doc.text('5. Fluencia Verbal', margin, y); y += 7;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.text(`Total palavras: ${results.fluency_verbal.summary?.totalWords || 0}  |  Taxa: ${results.fluency_verbal.summary?.ratePerMinute || 0} pal/min`, margin, y); y += 15;
+      }
+
+      if (results.fluency_speech) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(12);
+        doc.text('6. Fluencia da Fala', margin, y); y += 7;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.text(`Total de descontinuidades: ${results.fluency_speech.summary?.totalDisfluencies || 0}  |  Taxa: ${results.fluency_speech.summary?.ratePerMinute || 0}/min`, margin, y); y += 15;
+      }
+
+      if (results.phonology) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(12);
+        doc.text('7. Avaliacao Fonologica (PCC-R)', margin, y); y += 7;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.text(`PCC-R: ${results.phonology.pccr?.percentage || 0}%  |  Classificacao: ${results.phonology.pccr?.classification || 'N/A'}`, margin, y); y += 15;
+      }
       
       if (therapistSettings?.name || therapistSettings?.crfa) {
         y = doc.internal.pageSize.getHeight() - 40;
@@ -321,6 +357,106 @@ export default function ReportModule({ patient, assessmentId, therapistSettings,
                   <p><strong>Implicações Fonoaudiológicas Orofaciais:</strong></p>
                   <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.5rem', lineHeight: '1.5' }}>
                     Comportamentos de recusa ou rigidez alimentar no autismo frequentemente decorrem de hipersensibilidades a texturas, cheiros ou marcas. Indica-se intervenção integrando dessensibilização sistemática intraoral com Terapia Ocupacional e Nutrição, fortalecendo paralelamente a musculatura mastigatória (masseter/temporal) muitas vezes hipotônica devido à restrição a alimentos pastosos/macios.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {results.vocabulary && (
+            <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '2rem' }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#f59e0b', marginBottom: '0.75rem' }}>
+                4. Avaliação de Vocabulário
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginTop: '0.5rem' }}>
+                <div style={{ padding: '1.25rem', background: 'rgba(255,255,255,0.01)', borderRadius: '12px', border: '1px solid var(--border-color)', textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Desempenho</div>
+                  <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#f59e0b', marginTop: '0.25rem' }}>
+                    {results.vocabulary.summary?.correct || 0}/{results.vocabulary.summary?.total || 0} corretas
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
+                    Substituições: {results.vocabulary.summary?.substitutions || 0} | Sem resposta: {results.vocabulary.summary?.noResponse || 0}
+                  </div>
+                </div>
+                <div>
+                  <p><strong>Observações Clínicas:</strong></p>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.5rem', lineHeight: '1.5' }}>
+                    {results.vocabulary.observations || 'Nenhuma observação registrada.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {results.fluency_verbal && (
+            <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '2rem' }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#10b981', marginBottom: '0.75rem' }}>
+                5. Fluência Verbal
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginTop: '0.5rem' }}>
+                <div style={{ padding: '1.25rem', background: 'rgba(255,255,255,0.01)', borderRadius: '12px', border: '1px solid var(--border-color)', textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Indicadores</div>
+                  <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#10b981', marginTop: '0.25rem' }}>
+                    {results.fluency_verbal.summary?.ratePerMinute || 0} palavras/min
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
+                    Total: {results.fluency_verbal.summary?.totalWords || 0} | Únicas: {results.fluency_verbal.summary?.uniqueWords || 0}
+                  </div>
+                </div>
+                <div>
+                  <p><strong>Observações:</strong></p>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.5rem', lineHeight: '1.5' }}>
+                    {results.fluency_verbal.notes || 'Nenhuma observação registrada.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {results.fluency_speech && (
+            <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '2rem' }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#14b8a6', marginBottom: '0.75rem' }}>
+                6. Fluência da Fala
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginTop: '0.5rem' }}>
+                <div style={{ padding: '1.25rem', background: 'rgba(255,255,255,0.01)', borderRadius: '12px', border: '1px solid var(--border-color)', textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Descontinuidades</div>
+                  <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#14b8a6', marginTop: '0.25rem' }}>
+                    {results.fluency_speech.summary?.totalDisfluencies || 0} no total
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
+                    Taxa: {results.fluency_speech.summary?.ratePerMinute || 0}/min
+                  </div>
+                </div>
+                <div>
+                  <p><strong>Observações:</strong></p>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.5rem', lineHeight: '1.5' }}>
+                    {results.fluency_speech.notes || 'Nenhuma observação registrada.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {results.phonology && (
+            <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '2rem' }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#ec4899', marginBottom: '0.75rem' }}>
+                7. Avaliação Fonológica (PCC-R)
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginTop: '0.5rem' }}>
+                <div style={{ padding: '1.25rem', background: 'rgba(255,255,255,0.01)', borderRadius: '12px', border: '1px solid var(--border-color)', textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>PCC-R</div>
+                  <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#ec4899', marginTop: '0.25rem' }}>
+                    {results.phonology.pccr?.percentage || 0}%
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
+                    {results.phonology.pccr?.classification || 'N/A'} ({results.phonology.pccr?.correct || 0}/{results.phonology.pccr?.total || 0} consoantes)
+                  </div>
+                </div>
+                <div>
+                  <p><strong>Observações:</strong></p>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.5rem', lineHeight: '1.5' }}>
+                    {results.phonology.observations || 'Nenhuma observação registrada.'}
                   </p>
                 </div>
               </div>
