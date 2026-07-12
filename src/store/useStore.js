@@ -11,6 +11,11 @@ import {
   onAuthStateChanged,
 } from '../firebase';
 
+const normalizePatient = (patient) => ({
+  ...patient,
+  history: Array.isArray(patient.history) ? patient.history : [],
+});
+
 const useStore = create(
   persist(
     (set, get) => ({
@@ -58,20 +63,21 @@ const useStore = create(
       },
 
       persistPatients: (updatedList) => {
-        set({ patients: updatedList });
+        const sanitizedList = updatedList.map(normalizePatient);
+        set({ patients: sanitizedList });
         const { currentUser } = get();
         if (currentUser) {
           localStorage.setItem(
             `teafono_patients_${currentUser.uid}`,
-            JSON.stringify(updatedList)
+            JSON.stringify(sanitizedList)
           );
           if (isFirebaseEnabled()) {
-            updatedList.forEach(async (patient) => {
-              await savePatientToFirestore(patient, currentUser.uid);
+            sanitizedList.forEach((patient) => {
+              savePatientToFirestore(patient, currentUser.uid);
             });
           }
         } else {
-          localStorage.setItem('teafono_patients', JSON.stringify(updatedList));
+          localStorage.setItem('teafono_patients', JSON.stringify(sanitizedList));
         }
       },
 
@@ -87,12 +93,12 @@ const useStore = create(
       addPatient: (newPatData) => {
         const newPat = {
           id: 'tp_' + Date.now(),
-          name: newPatData.name,
+          name: newPatData.name?.trim(),
           age: newPatData.age,
           gender: newPatData.gender,
-          diagnosis: newPatData.diagnosis,
-          birthDate: newPatData.birthDate,
-          speechComplaint: newPatData.speechComplaint,
+          diagnosis: newPatData.diagnosis?.trim() || '',
+          birthDate: newPatData.birthDate || '',
+          speechComplaint: newPatData.speechComplaint?.trim() || '',
           createdAt: new Date().toISOString(),
           history: [],
           isSelected: true,
@@ -120,12 +126,12 @@ const useStore = create(
           if (p.id === updatedPatData.id) {
             return {
               ...p,
-              name: updatedPatData.name,
+              ...updatedPatData,
+              name: updatedPatData.name?.trim(),
               age: updatedPatData.age,
-              gender: updatedPatData.gender,
-              diagnosis: updatedPatData.diagnosis,
-              birthDate: updatedPatData.birthDate,
-              speechComplaint: updatedPatData.speechComplaint,
+              diagnosis: updatedPatData.diagnosis?.trim() || '',
+              birthDate: updatedPatData.birthDate || '',
+              speechComplaint: updatedPatData.speechComplaint?.trim() || '',
             };
           }
           return p;
@@ -161,7 +167,7 @@ const useStore = create(
           date: new Date().toISOString(),
           results: { [moduleName]: results },
         };
-        patientCopy.history = [newHistoryEntry, ...patientCopy.history];
+        patientCopy.history = [newHistoryEntry, ...(patientCopy.history || [])];
         const updatedPatients = [...patients];
         updatedPatients[patientIdx] = patientCopy;
         set({ patients: updatedPatients, activeReportId: evalId });
@@ -204,31 +210,41 @@ const useStore = create(
             set({ currentUser: user, isGuestMode: false });
             const firestoreList = await loadPatientsFromFirestore(user.uid);
             if (firestoreList && firestoreList.length > 0) {
-              set({ patients: firestoreList });
-              localStorage.setItem(`teafono_patients_${user.uid}`, JSON.stringify(firestoreList));
-              const selected = firestoreList.find((p) => p.isSelected);
+              const normalizedList = firestoreList.map(normalizePatient);
+              set({ patients: normalizedList });
+              localStorage.setItem(`teafono_patients_${user.uid}`, JSON.stringify(normalizedList));
+              const selected = normalizedList.find((p) => p.isSelected) || normalizedList[0];
               if (selected) set({ activePatientId: selected.id });
             } else {
-              const localStored = localStorage.getItem('teafono_patients');
-              if (localStored) {
-                const parsed = JSON.parse(localStored);
-                if (
-                  parsed.length > 0 &&
-                  window.confirm(
-                    'Detectamos fichas de pacientes criadas localmente neste navegador. Deseja sincronizá-las e salvá-las na sua conta em nuvem?'
-                  )
-                ) {
-                  set({ patients: parsed });
-                  localStorage.setItem(`teafono_patients_${user.uid}`, JSON.stringify(parsed));
-                  parsed.forEach(async (pat) => {
-                    await savePatientToFirestore(pat, user.uid);
-                  });
-                  localStorage.removeItem('teafono_patients');
-                } else {
-                  set({ patients: [] });
-                }
+              const userStored = localStorage.getItem(`teafono_patients_${user.uid}`);
+              if (userStored) {
+                const normalizedList = JSON.parse(userStored).map(normalizePatient);
+                set({ patients: normalizedList });
+                const selected = normalizedList.find((p) => p.isSelected) || normalizedList[0];
+                if (selected) set({ activePatientId: selected.id });
               } else {
-                set({ patients: [] });
+                const localStored = localStorage.getItem('teafono_patients');
+                if (localStored) {
+                  const parsed = JSON.parse(localStored);
+                  if (
+                    parsed.length > 0 &&
+                    window.confirm(
+                      'Detectamos fichas de pacientes criadas localmente neste navegador. Deseja sincronizá-las e salvá-las na sua conta em nuvem?'
+                    )
+                  ) {
+                    const normalizedList = parsed.map(normalizePatient);
+                    set({ patients: normalizedList });
+                    localStorage.setItem(`teafono_patients_${user.uid}`, JSON.stringify(normalizedList));
+                    normalizedList.forEach((pat) => {
+                      savePatientToFirestore(pat, user.uid);
+                    });
+                    localStorage.removeItem('teafono_patients');
+                  } else {
+                    set({ patients: [], activePatientId: null });
+                  }
+                } else {
+                  set({ patients: [], activePatientId: null });
+                }
               }
             }
           } else {
@@ -247,8 +263,9 @@ const useStore = create(
         const stored = localStorage.getItem('teafono_patients');
         if (stored) {
           const parsed = JSON.parse(stored);
-          set({ patients: parsed });
-          const selected = parsed.find((p) => p.isSelected);
+          const normalizedList = parsed.map(normalizePatient);
+          set({ patients: normalizedList });
+          const selected = normalizedList.find((p) => p.isSelected) || normalizedList[0];
           if (selected) set({ activePatientId: selected.id });
         } else {
           localStorage.setItem('teafono_patients', JSON.stringify(mockTeaPatients));
@@ -269,6 +286,7 @@ const useStore = create(
       partialize: (state) => ({
         isLightMode: state.isLightMode,
         patients: state.patients,
+        activePatientId: state.activePatientId,
       }),
     }
   )
