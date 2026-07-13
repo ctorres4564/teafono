@@ -54,9 +54,17 @@ export async function mergePatients({
               if (fresh && fresh.length > 0) {
                 merged = [...fresh];
                 debugLog(`[mergePatients] Após sync, Firestore tem ${fresh.length} pacientes`);
+              } else {
+                // Sync confirmado, mas a releitura falhou/veio vazia: não descarta os
+                // pacientes que acabaram de ser sincronizados.
+                merged = [...merged, ...localsToSync];
               }
             } else {
-              console.warn('[mergePatients] Sync parcial/falha — mantendo merge local');
+              // Sync falhou: os pacientes/avaliações locais nunca chegaram ao Firestore.
+              // `merged` (baseado em firestoreList) nunca os incluiu — sem isto eles
+              // desapareceriam da tela mesmo estando salvos no localStorage.
+              console.warn('[mergePatients] Sync parcial/falha — mantendo pacientes locais que não sincronizaram');
+              merged = [...merged, ...localsToSync];
             }
           }
         }
