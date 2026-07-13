@@ -432,7 +432,6 @@ const useStore = create(
       partialize: (state) => ({
         isLightMode: state.isLightMode,
         isGuestMode: state.isGuestMode,
-        patients: state.patients,
       }),
     }
   )
