@@ -39,6 +39,10 @@ const useStore = create(
       },
 
       loadFromLocalStorage: () => {
+        const storedGuestMode = localStorage.getItem('teafono_guest_mode');
+        if (storedGuestMode === 'true') {
+          set({ isGuestMode: true });
+        }
         const storedSettings = localStorage.getItem('teafono_therapist_settings');
         if (storedSettings) {
           set({ therapistSettings: JSON.parse(storedSettings) });
@@ -191,6 +195,7 @@ const useStore = create(
             console.error('Erro ao deslogar:', err);
           }
         }
+        localStorage.setItem('teafono_guest_mode', JSON.stringify(false));
         set({
           isGuestMode: false,
           currentUser: null,
@@ -275,6 +280,7 @@ const useStore = create(
 
       setGuestMode: (val) => {
         set({ isGuestMode: val });
+        localStorage.setItem('teafono_guest_mode', JSON.stringify(val));
       },
 
       setActiveReportId: (val) => {
@@ -285,6 +291,7 @@ const useStore = create(
       name: 'teafono-store',
       partialize: (state) => ({
         isLightMode: state.isLightMode,
+        isGuestMode: state.isGuestMode,
         patients: state.patients,
         activePatientId: state.activePatientId,
       }),
