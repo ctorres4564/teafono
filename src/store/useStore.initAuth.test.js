@@ -154,15 +154,16 @@ describe('initAuth', () => {
     expect(theoSync[1]).toBe(UID);
   });
 
-  it('5. dados do guest (teafono_patients) não contaminam merge quando usuário já tem dados no Firestore', async () => {
+  it('5. dados do guest (teafono_patients) são migrados quando usuário não tem localStorage próprio', async () => {
     const firestorePatient = createPatient({ id: 'f1', name: 'MeuPaciente' });
     const guestPatient = createPatient({ id: 'g1', name: 'GuestData' });
 
     await simulateInitAuth(mockUser, [firestorePatient], null, [guestPatient]);
 
     const { patients } = useStore.getState();
-    expect(patients).toHaveLength(1);
-    expect(patients[0].name).toBe('MeuPaciente');
+    expect(patients).toHaveLength(2);
+    expect(patients.find(p => p.id === 'f1').name).toBe('MeuPaciente');
+    expect(patients.find(p => p.id === 'g1').name).toBe('GuestData');
 
     const guestKey = localStorage.getItem('teafono_patients');
     expect(guestKey).not.toBeNull();

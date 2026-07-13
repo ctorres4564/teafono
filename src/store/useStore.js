@@ -331,11 +331,12 @@ const useStore = create(
               guestLocalRaw = localStorage.getItem(LOCAL_STORAGE_KEY + '_backup');
             }
 
-            if (firestoreList && firestoreList.length > 0) {
+              if (firestoreList && firestoreList.length > 0) {
               let merged = [...firestoreList];
-              if (userLocalRaw) {
+              const mergeLocalRaw = userLocalRaw || guestLocalRaw || null;
+              if (mergeLocalRaw) {
                 try {
-                  const localParsed = JSON.parse(userLocalRaw);
+                  const localParsed = JSON.parse(mergeLocalRaw);
                   if (Array.isArray(localParsed) && localParsed.length > 0) {
                     merged = firestoreList.map((fPat) => {
                       const localPat = localParsed.find((l) => l.id === fPat.id);
