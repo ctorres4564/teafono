@@ -196,6 +196,7 @@ const useStore = create(
         const { patients, activePatientId } = get();
         const pid = patientId || activePatientId;
         debugLog(`[saveAssessmentResults] iniciando: moduleName=${moduleName}, pid=${pid}, entryId=${entryId}, patients.length=${patients.length}`);
+        console.log(`[DIAGNÓSTICO] 📥 PAYLOAD RECEBIDO:`, { moduleName, resultsKeys: Object.keys(results || {}), resultsSize: JSON.stringify(results).length });
         if (!pid) { console.error('[saveAssessmentResults] Nenhum patientId disponível'); return { success: false, error: 'Nenhum patientId' }; }
         const patientIdx = patients.findIndex((p) => p.id === pid);
         if (patientIdx === -1) { console.error('[saveAssessmentResults] Paciente não encontrado:', pid); return { success: false, error: 'Paciente não encontrado' }; }
@@ -218,6 +219,7 @@ const useStore = create(
           console.error('[saveAssessmentResults] Erro ao clonar results:', e);
           resultsCopy = { ...results };
         }
+        console.log(`[DIAGNÓSTICO] 🔄 APÓS CLONE:`, { resultsCopyKeys: Object.keys(resultsCopy || {}), resultsCopySize: JSON.stringify(resultsCopy).length });
 
         if (entryId) {
           const existingIdx = patientCopy.history.findIndex((h) => h.id === entryId);
