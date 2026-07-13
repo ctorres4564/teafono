@@ -75,10 +75,44 @@ const useStore = create(
         } catch (e) {
           console.error('[persistPatients] Erro ao salvar no localStorage:', e);
         }
-        if (currentUser && isFirebaseEnabled()) {
-          updatedList.forEach((patient) => {
-            savePatientToFirestore(patient, currentUser.uid);
-          });
+      },
+
+      syncPatientsToFirestore: async (patientList) => {
+        const { currentUser } = get();
+        if (!currentUser || !isFirebaseEnabled()) return { success: false, error: 'Firestore não disponível' };
+        const results = [];
+        for (const patient of patientList) {
+          try {
+            const result = await savePatientToFirestore(patient, currentUser.uid);
+            results.push({ id: patient.id, ...result });
+            if (!result.success) {
+              console.error(`[syncPatientsToFirestore] Falha ao salvar ${patient.id}: ${result.error}`);
+            }
+          } catch (err) {
+            console.error(`[syncPatientsToFirestore] Erro inesperado ao salvar ${patient.id}:`, err);
+            results.push({ id: patient.id, success: false, error: err.message });
+          }
+        }
+        const ok = results.filter(r => r.success).length;
+        const fail = results.filter(r => !r.success).length;
+        if (fail > 0) {
+          console.warn(`[syncPatientsToFirestore] ${ok} ok, ${fail} falha(s)`);
+        } else {
+          console.log(`[syncPatientsToFirestore] ${ok} paciente(s) sincronizado(s)`);
+        }
+        return { results, success: fail === 0 };
+      },
+
+      loadAndVerifyFirestore: async () => {
+        const { currentUser } = get();
+        if (!currentUser || !isFirebaseEnabled()) return null;
+        try {
+          const fresh = await loadPatientsFromFirestore(currentUser.uid);
+          console.log(`[loadAndVerifyFirestore] ${fresh.length} pacientes lidos do Firestore pós-sincronização`);
+          return fresh;
+        } catch (err) {
+          console.error('[loadAndVerifyFirestore] Erro ao reler Firestore:', err);
+          return null;
         }
       },
 
@@ -156,13 +190,13 @@ const useStore = create(
         get().persistPatients(resetList);
       },
 
-      saveAssessmentResults: (moduleName, results, entryId, patientId) => {
+      saveAssessmentResults: async (moduleName, results, entryId, patientId) => {
         const { patients, activePatientId } = get();
         const pid = patientId || activePatientId;
         console.log(`[saveAssessmentResults] iniciando: moduleName=${moduleName}, pid=${pid}, entryId=${entryId}, patients.length=${patients.length}`);
-        if (!pid) { console.error('[saveAssessmentResults] Nenhum patientId disponível'); return; }
+        if (!pid) { console.error('[saveAssessmentResults] Nenhum patientId disponível'); return { success: false, error: 'Nenhum patientId' }; }
         const patientIdx = patients.findIndex((p) => p.id === pid);
-        if (patientIdx === -1) { console.error('[saveAssessmentResults] Paciente não encontrado:', pid); return; }
+        if (patientIdx === -1) { console.error('[saveAssessmentResults] Paciente não encontrado:', pid); return { success: false, error: 'Paciente não encontrado' }; }
 
         let patientCopy;
         try {
@@ -224,9 +258,20 @@ const useStore = create(
             if (savedPat && Array.isArray(savedPat.history) && savedPat.history.some((h) => h.id === evalId)) {
               savedOk = true;
             }
-          } catch (_) {}
+          } catch (parseErr) {
+            console.error('[saveAssessmentResults] Erro ao verificar localStorage:', parseErr);
+          }
         }
         console.log(`[saveAssessmentResults] ${moduleName} salvo para paciente ${pid} (entry: ${evalId}) - localStorage verificado: ${savedOk}`);
+
+        const firestoreResult = await get().syncPatientsToFirestore([patientCopy]);
+        if (firestoreResult.success) {
+          console.log(`[saveAssessmentResults] Firestore confirmado para ${pid}`);
+          return { success: true, entryId: evalId };
+        } else {
+          console.error(`[saveAssessmentResults] Firestore FALHOU para ${pid}`);
+          return { success: false, error: 'Falha ao salvar no Firestore', entryId: evalId };
+        }
       },
 
       viewReport: (reportId) => {
@@ -312,9 +357,16 @@ const useStore = create(
                     });
                     if (localsToSync.length > 0) {
                       console.log(`[initAuth] Sincronizando ${localsToSync.length} paciente(s) locais com o Firestore`);
-                      localsToSync.forEach((pat) => {
-                        savePatientToFirestore(pat, user.uid);
-                      });
+                      const syncResult = await get().syncPatientsToFirestore(localsToSync);
+                      if (syncResult.success) {
+                        const freshFromFirestore = await get().loadAndVerifyFirestore();
+                        if (freshFromFirestore && freshFromFirestore.length > 0) {
+                          merged = [...freshFromFirestore];
+                          console.log(`[initAuth] Após sync, Firestore tem ${freshFromFirestore.length} pacientes — estado atualizado via Firestore`);
+                        }
+                      } else {
+                        console.warn('[initAuth] Sync parcial/falha — mantendo merge local com pacientes sincronizados');
+                      }
                     }
                   }
                 } catch (e) { console.error('[initAuth] Erro ao fazer merge:', e); }
@@ -352,9 +404,17 @@ const useStore = create(
                     set({ patients: parsed });
                     localStorage.setItem(userKey, JSON.stringify(parsed));
                     const isGuestSource = !userLocalRaw && !!guestLocalRaw;
-                    parsed.forEach(async (pat) => {
-                      await savePatientToFirestore(pat, user.uid);
-                    });
+                    const syncResult = await get().syncPatientsToFirestore(parsed);
+                    if (syncResult.success) {
+                      const freshFromFirestore = await get().loadAndVerifyFirestore();
+                      if (freshFromFirestore && freshFromFirestore.length > 0) {
+                        set({ patients: freshFromFirestore });
+                        localStorage.setItem(userKey, JSON.stringify(freshFromFirestore));
+                        console.log(`[initAuth] Após sync, Firestore tem ${freshFromFirestore.length} pacientes`);
+                      }
+                    } else {
+                      console.warn('[initAuth] Sync para nuvem teve falhas — dados mantidos localmente');
+                    }
                     if (isGuestSource) {
                       console.log(`[initAuth] Dados migrados do modo convidado para nuvem: ${parsed.length} pacientes`);
                     } else {

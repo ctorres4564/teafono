@@ -38,11 +38,11 @@ describe('addPatient', () => {
 });
 
 describe('saveAssessmentResults', () => {
-  it('deve adicionar entrada no history do paciente', () => {
+  it('deve adicionar entrada no history do paciente', async () => {
     getStore().addPatient({ name: 'Maria', age: 4, gender: 'Feminino' });
     const pid = getStore().patients[0].id;
 
-    getStore().saveAssessmentResults('anamnese', { queixa: 'atraso de fala' }, null, pid);
+    await getStore().saveAssessmentResults('anamnese', { queixa: 'atraso de fala' }, null, pid);
 
     const patient = getStore().patients[0];
     expect(patient.history).toHaveLength(1);
@@ -50,12 +50,12 @@ describe('saveAssessmentResults', () => {
     expect(patient.history[0].results.anamnese.queixa).toBe('atraso de fala');
   });
 
-  it('deve preservar entradas existentes no history', () => {
+  it('deve preservar entradas existentes no history', async () => {
     getStore().addPatient({ name: 'João', age: 6, gender: 'Masculino' });
     const pid = getStore().patients[0].id;
 
-    getStore().saveAssessmentResults('mchat', { score: 3 }, null, pid);
-    getStore().saveAssessmentResults('anamnese', { queixa: 'gagueira' }, null, pid);
+    await getStore().saveAssessmentResults('mchat', { score: 3 }, null, pid);
+    await getStore().saveAssessmentResults('anamnese', { queixa: 'gagueira' }, null, pid);
 
     const patient = getStore().patients[0];
     expect(patient.history).toHaveLength(2);
@@ -63,14 +63,14 @@ describe('saveAssessmentResults', () => {
     expect(patient.history[1].results.mchat.score).toBe(3);
   });
 
-  it('deve atualizar entrada existente quando entryId é fornecido', () => {
+  it('deve atualizar entrada existente quando entryId é fornecido', async () => {
     getStore().addPatient({ name: 'Pedro', age: 7, gender: 'Masculino' });
     const pid = getStore().patients[0].id;
 
-    getStore().saveAssessmentResults('anamnese', { queixa: 'inicial' }, null, pid);
+    await getStore().saveAssessmentResults('anamnese', { queixa: 'inicial' }, null, pid);
     const entryId = getStore().patients[0].history[0].id;
 
-    getStore().saveAssessmentResults('anamnese', { queixa: 'atualizada', observacao: 'melhora' }, entryId, pid);
+    await getStore().saveAssessmentResults('anamnese', { queixa: 'atualizada', observacao: 'melhora' }, entryId, pid);
 
     const patient = getStore().patients[0];
     expect(patient.history).toHaveLength(1);
@@ -168,12 +168,12 @@ describe('saveAssessmentResults - verificação completa de campos no localStora
     }, []);
   }
 
-  it('deve preservar todos os campos no history em memória', () => {
+  it('deve preservar todos os campos no history em memória', async () => {
     getStore().addPatient({ name: 'Maria', age: 4, gender: 'Feminino' });
     const pid = getStore().patients[0].id;
     const form = createFullForm();
 
-    getStore().saveAssessmentResults('anamnese', form, null, pid);
+    await getStore().saveAssessmentResults('anamnese', form, null, pid);
 
     const saved = getStore().patients[0].history[0].results.anamnese;
     const savedKeys = flattenKeys(saved);
@@ -184,12 +184,12 @@ describe('saveAssessmentResults - verificação completa de campos no localStora
     Object.keys(form.diagnosis.affectedAreas).forEach(k => expect(saved.diagnosis.affectedAreas[k]).toBe(form.diagnosis.affectedAreas[k]));
   });
 
-  it('deve preservar todos os campos no localStorage após saveAssessmentResults', () => {
+  it('deve preservar todos os campos no localStorage após saveAssessmentResults', async () => {
     getStore().addPatient({ name: 'Pedro', age: 6, gender: 'Masculino' });
     const pid = getStore().patients[0].id;
     const form = createFullForm();
 
-    getStore().saveAssessmentResults('anamnese', form, null, pid);
+    await getStore().saveAssessmentResults('anamnese', form, null, pid);
 
     const stored = localStorage.getItem('teafono_patients');
     expect(stored).not.toBeNull();
@@ -214,12 +214,12 @@ describe('saveAssessmentResults - verificação completa de campos no localStora
     expect(savedAnamnese.diagnosis.etiology).toBe('functional');
   });
 
-  it('deve preservar campos após ciclo completo: save → JSON → parse → compare', () => {
+  it('deve preservar campos após ciclo completo: save → JSON → parse → compare', async () => {
     getStore().addPatient({ name: 'Ana', age: 3, gender: 'Feminino' });
     const pid = getStore().patients[0].id;
     const form = createFullForm();
 
-    getStore().saveAssessmentResults('anamnese', form, null, pid);
+    await getStore().saveAssessmentResults('anamnese', form, null, pid);
 
     const stored = localStorage.getItem('teafono_patients');
     const parsed = JSON.parse(stored);
@@ -240,7 +240,7 @@ describe('saveAssessmentResults - verificação completa de campos no localStora
     deepCompare(form, saved, 'root');
   });
 
-  it('deve preservar dados de pacientes existentes após salvar anamnese', () => {
+  it('deve preservar dados de pacientes existentes após salvar anamnese', async () => {
     getStore().addPatient({ name: 'Carlos', age: 5, gender: 'Masculino', diagnosis: 'TEA', birthDate: '2019-01-01', speechComplaint: 'Atraso de fala' });
     const pid = getStore().patients[0].id;
 
@@ -248,7 +248,7 @@ describe('saveAssessmentResults - verificação completa de campos no localStora
     const existingDiagnosis = getStore().patients[0].diagnosis;
 
     const form = createFullForm();
-    getStore().saveAssessmentResults('anamnese', form, null, pid);
+    await getStore().saveAssessmentResults('anamnese', form, null, pid);
 
     const stored = localStorage.getItem('teafono_patients');
     const parsed = JSON.parse(stored);
@@ -259,19 +259,19 @@ describe('saveAssessmentResults - verificação completa de campos no localStora
     expect(patient.history).toHaveLength(1);
   });
 
-  it('deve atualizar entrada existente sem duplicar', () => {
+  it('deve atualizar entrada existente sem duplicar', async () => {
     getStore().addPatient({ name: 'Luiza', age: 7, gender: 'Feminino' });
     const pid = getStore().patients[0].id;
     const form1 = createFullForm();
     form1.identification.name = 'Luiza Editada';
 
-    getStore().saveAssessmentResults('anamnese', form1, null, pid);
+    await getStore().saveAssessmentResults('anamnese', form1, null, pid);
     const entryId = getStore().patients[0].history[0].id;
 
     const form2 = JSON.parse(JSON.stringify(form1));
     form2.identification.name = 'Luiza Final';
 
-    getStore().saveAssessmentResults('anamnese', form2, entryId, pid);
+    await getStore().saveAssessmentResults('anamnese', form2, entryId, pid);
 
     const stored = localStorage.getItem('teafono_patients');
     const parsed = JSON.parse(stored);
@@ -282,12 +282,12 @@ describe('saveAssessmentResults - verificação completa de campos no localStora
     expect(patient.history[0].results.anamnese.identification.name).toBe('Luiza Final');
   });
 
-  it('deve preservar outras avaliações (mchat, etc.) ao salvar anamnese', () => {
+  it('deve preservar outras avaliações (mchat, etc.) ao salvar anamnese', async () => {
     getStore().addPatient({ name: 'Rafael', age: 4, gender: 'Masculino' });
     const pid = getStore().patients[0].id;
 
-    getStore().saveAssessmentResults('mchat', { score: 5, risk: 'alto' }, null, pid);
-    getStore().saveAssessmentResults('anamnese', createFullForm(), null, pid);
+    await getStore().saveAssessmentResults('mchat', { score: 5, risk: 'alto' }, null, pid);
+    await getStore().saveAssessmentResults('anamnese', createFullForm(), null, pid);
 
     const stored = localStorage.getItem('teafono_patients');
     const parsed = JSON.parse(stored);

@@ -9,16 +9,23 @@ export default function AnamnesePage() {
   const patient = useStore((s) => s.patients.find((p) => p.id === patientId));
   const [saveStatus, setSaveStatus] = useState(null);
 
-  const handleSave = useCallback((moduleName, results, id) => {
+  const handleSave = useCallback(async (moduleName, results, id) => {
     try {
       setSaveStatus('saving');
       const state = useStore.getState();
-      state.saveAssessmentResults(moduleName, results, id || entryId, patientId);
-      setSaveStatus('saved');
-      setTimeout(() => navigate('/dashboard'), 600);
+      const result = await state.saveAssessmentResults(moduleName, results, id || entryId, patientId);
+      if (result?.success) {
+        setSaveStatus('saved');
+        setTimeout(() => navigate('/dashboard'), 600);
+      } else {
+        console.error('[AnamnesePage] Falha ao salvar no Firestore:', result?.error);
+        setSaveStatus('error');
+        setTimeout(() => setSaveStatus(null), 4000);
+      }
     } catch (err) {
       console.error('[AnamnesePage] Erro ao salvar:', err);
       setSaveStatus('error');
+      setTimeout(() => setSaveStatus(null), 4000);
     }
   }, [patientId, entryId, navigate]);
 

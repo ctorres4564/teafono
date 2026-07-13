@@ -50,7 +50,23 @@ function simulateInitAuth(user, firestorePatients, localUserData, localGuestData
     localStorage.setItem('teafono_patients', JSON.stringify(localGuestData));
   }
 
-  mockLoadPatientsFromFirestore.mockResolvedValue(firestorePatients || []);
+  const localList = localUserData || localGuestData || [];
+  const mergedList = [...(firestorePatients || [])];
+  for (const lp of localList) {
+    if (!mergedList.find(m => m.id === lp.id)) {
+      mergedList.push({ ...lp });
+    }
+  }
+
+  let callCount = 0;
+  mockSavePatientToFirestore.mockResolvedValue({ success: true });
+  mockLoadPatientsFromFirestore.mockImplementation(() => {
+    callCount++;
+    if (callCount >= 2 && mergedList.length > (firestorePatients?.length || 0)) {
+      return Promise.resolve([...mergedList]);
+    }
+    return Promise.resolve(firestorePatients || []);
+  });
   mockOnAuthStateChanged.mockImplementation((_auth, cb) => {
     setTimeout(() => cb(user), 0);
     return () => {};
@@ -58,7 +74,7 @@ function simulateInitAuth(user, firestorePatients, localUserData, localGuestData
 
   return new Promise((resolve) => {
     useStore.getState().initAuth();
-    setTimeout(() => resolve(), 100);
+    setTimeout(() => resolve(), 200);
   });
 }
 
@@ -181,10 +197,15 @@ describe('initAuth', () => {
     const storedAfter = JSON.parse(localStorage.getItem(`teafono_patients_${UID}`));
     expect(storedAfter).toHaveLength(2);
 
-    mockLoadPatientsFromFirestore.mockResolvedValue([
-      firestorePatient,
-      { ...localPatient },
-    ]);
+    let reloadCallCount = 0;
+    mockSavePatientToFirestore.mockResolvedValue({ success: true });
+    mockLoadPatientsFromFirestore.mockImplementation(() => {
+      reloadCallCount++;
+      if (reloadCallCount >= 2) {
+        return Promise.resolve([{ ...firestorePatient }, { ...localPatient }]);
+      }
+      return Promise.resolve([{ ...firestorePatient }]);
+    });
     mockOnAuthStateChanged.mockImplementation((_auth, cb) => {
       setTimeout(() => cb(mockUser), 0);
       return () => {};
@@ -192,7 +213,7 @@ describe('initAuth', () => {
 
     await new Promise((resolve) => {
       useStore.getState().initAuth();
-      setTimeout(() => resolve(), 100);
+      setTimeout(() => resolve(), 200);
     });
 
     const { patients } = useStore.getState();
@@ -222,7 +243,7 @@ describe('initAuth', () => {
 
     await new Promise((resolve) => {
       useStore.getState().initAuth();
-      setTimeout(() => resolve(), 100);
+      setTimeout(() => resolve(), 200);
     });
 
     const { patients } = useStore.getState();
@@ -230,7 +251,7 @@ describe('initAuth', () => {
     expect(patients[0].name).toBe('PacienteB');
   });
 
-  it('9. salvamento e reabertura da anamnese persiste no localStorage', () => {
+  it('9. salvamento e reabertura da anamnese persiste no localStorage', async () => {
     useStore.getState().addPatient({ name: 'AnamneseTest', age: 4, gender: 'Feminino' });
     const pid = useStore.getState().patients[0].id;
 
@@ -240,7 +261,7 @@ describe('initAuth', () => {
       diagnosis: { mainDiagnosis: 'Atraso de fala', affectedAreas: { speech: true } },
     };
 
-    useStore.getState().saveAssessmentResults('anamnese', form, null, pid);
+    await useStore.getState().saveAssessmentResults('anamnese', form, null, pid);
 
     const stored = JSON.parse(localStorage.getItem('teafono_patients'));
     const savedAnamnese = stored.find(p => p.id === pid).history[0].results.anamnese;
@@ -284,7 +305,7 @@ describe('initAuth', () => {
 
     await new Promise((resolve) => {
       useStore.getState().initAuth();
-      setTimeout(() => resolve(), 100);
+      setTimeout(() => resolve(), 200);
     });
 
     const { patients } = useStore.getState();
@@ -305,7 +326,7 @@ describe('initAuth', () => {
 
     await new Promise((resolve) => {
       useStore.getState().initAuth();
-      setTimeout(() => resolve(), 100);
+      setTimeout(() => resolve(), 200);
     });
 
     expect(localStorage.getItem('teafono_patients')).not.toBeNull();
