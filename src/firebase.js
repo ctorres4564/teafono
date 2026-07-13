@@ -63,11 +63,27 @@ export { auth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendP
 /**
  * Salva ou atualiza um paciente individual no Firestore sob o UID do usuário
  */
+const removeUndefinedFields = (value) => {
+  if (Array.isArray(value)) {
+    return value.map(removeUndefinedFields);
+  }
+
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([, fieldValue]) => fieldValue !== undefined)
+        .map(([key, fieldValue]) => [key, removeUndefinedFields(fieldValue)])
+    );
+  }
+
+  return value;
+};
+
 export async function savePatientToFirestore(patient, userId) {
-  if (!db || !userId) return;
+  if (!db || !userId || !patient?.id) return;
   try {
     const patientRef = doc(db, 'users', userId, 'patients', patient.id);
-    await setDoc(patientRef, patient, { merge: true });
+    await setDoc(patientRef, removeUndefinedFields(patient), { merge: true });
     console.log(`Paciente ${patient.name} (${patient.id}) sincronizado na nuvem para o usuário ${userId}.`);
   } catch (err) {
     console.error("Erro ao sincronizar paciente no Firestore:", err);

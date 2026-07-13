@@ -77,7 +77,7 @@ function PragmaticsChart({ history }) {
   );
 }
 
-export default function Dashboard({ patients, onSelectPatient, onAddPatient, onDeletePatient, onUpdatePatient, onImportBackup, onStartAssessment, onViewReport, onGoToCaa }) {
+export default function Dashboard({ patients, activePatientId, onSelectPatient, onAddPatient, onDeletePatient, onUpdatePatient, onImportBackup, onStartAssessment, onViewReport, onGoToCaa }) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newName, setNewName] = useState('');
   const [newAge, setNewAge] = useState('');
@@ -175,7 +175,7 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
       p.speechComplaint?.toLowerCase().includes(term);
   });
 
-  const selectedPatient = patients.find(p => p.isSelected);
+  const selectedPatient = patients.find(p => p.id === activePatientId) || patients.find(p => p.isSelected);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', width: '100%' }}>
