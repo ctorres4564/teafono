@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { isLocalNewer, getLocalsToSync, mergePatients } from './mergePatients';
+import { isLocalNewer, getLocalsToSync, stripDemoPatients, mergePatients } from './mergePatients';
 
 function makePatient(overrides = {}) {
   return {
@@ -61,6 +61,13 @@ describe('getLocalsToSync', () => {
     const merged = [{ id: 'a' }, { id: 'b' }];
     const localParsed = [{ id: 'a' }, { id: 'b' }];
     expect(getLocalsToSync(localParsed, merged)).toHaveLength(0);
+  });
+});
+
+describe('stripDemoPatients', () => {
+  it('remove pacientes marcados como isDemo', () => {
+    const list = [{ id: 'tp1', isDemo: true }, { id: 'r1' }];
+    expect(stripDemoPatients(list)).toEqual([{ id: 'r1' }]);
   });
 });
 
@@ -130,6 +137,66 @@ describe('mergePatients', () => {
     expect(result.isGuestMigration).toBe(true);
     expect(result.migratedCount).toBe(1);
     expect(syncMock).toHaveBeenCalled();
+  });
+
+  it('NÃO migra pacientes de demonstração (isDemo) do guest para a nuvem', async () => {
+    const syncMock = vi.fn().mockResolvedValue({ success: true });
+    const loadMock = vi.fn();
+
+    const result = await mergePatients({
+      firestoreList: [],
+      firestoreError: false,
+      userLocalRaw: null,
+      guestLocalRaw: JSON.stringify([
+        makePatient({ id: 'tp1', name: 'Arthur de Almeida Rezende', isDemo: true }),
+        makePatient({ id: 'tp2', name: 'Laura Viana Mendes', isDemo: true }),
+      ]),
+      syncPatientsToFirestore: syncMock,
+      loadAndVerifyFirestore: loadMock,
+    });
+
+    expect(result.patients).toEqual([]);
+    expect(syncMock).not.toHaveBeenCalled();
+    expect(loadMock).not.toHaveBeenCalled();
+  });
+
+  it('migra apenas pacientes reais do guest, ignorando os de demonstração misturados', async () => {
+    const syncMock = vi.fn().mockResolvedValue({ success: true });
+    const loadMock = vi.fn().mockResolvedValue([makePatient({ id: 'real1', name: 'Real' })]);
+
+    const result = await mergePatients({
+      firestoreList: [],
+      firestoreError: false,
+      userLocalRaw: null,
+      guestLocalRaw: JSON.stringify([
+        makePatient({ id: 'tp1', name: 'Demo', isDemo: true }),
+        makePatient({ id: 'real1', name: 'Real' }),
+      ]),
+      syncPatientsToFirestore: syncMock,
+      loadAndVerifyFirestore: loadMock,
+    });
+
+    expect(result.patients).toHaveLength(1);
+    expect(result.patients[0].name).toBe('Real');
+    expect(syncMock).toHaveBeenCalledWith([expect.objectContaining({ id: 'real1' })]);
+  });
+
+  it('não sincroniza pacientes de demonstração do guest quando já existem dados no Firestore', async () => {
+    const syncMock = vi.fn().mockResolvedValue({ success: true });
+    const loadMock = vi.fn();
+
+    const result = await mergePatients({
+      firestoreList: [makePatient({ id: 'f1', name: 'ContaReal' })],
+      firestoreError: false,
+      userLocalRaw: null,
+      guestLocalRaw: JSON.stringify([makePatient({ id: 'tp1', name: 'Demo', isDemo: true })]),
+      syncPatientsToFirestore: syncMock,
+      loadAndVerifyFirestore: loadMock,
+    });
+
+    expect(result.patients).toHaveLength(1);
+    expect(result.patients[0].name).toBe('ContaReal');
+    expect(syncMock).not.toHaveBeenCalled();
   });
 
   it('retorna lista vazia quando não há dados', async () => {

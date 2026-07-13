@@ -42,6 +42,13 @@ Sistema de avaliação e intervenção fonoaudiológica especializado no Transto
 npm install
 ```
 
+5. Publique as regras de segurança do Firestore (`firestore.rules`), que restringem cada usuário aos próprios dados em `users/{uid}/patients`:
+
+```bash
+npx firebase-tools use --add   # selecione o projeto Firebase do .env
+npx firebase-tools deploy --only firestore:rules
+```
+
 ## Scripts
 
 | Script | Descrição |

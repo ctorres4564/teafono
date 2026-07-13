@@ -10,6 +10,14 @@ export function getLocalsToSync(localParsed, merged) {
   return localParsed.filter((lPat) => !merged.find((m) => m.id === lPat.id));
 }
 
+/**
+ * Remove pacientes de demonstração (semeados pelo Modo Convidado) de uma lista.
+ * Nunca devem ser migrados/sincronizados para uma conta real no Firestore.
+ */
+export function stripDemoPatients(list) {
+  return list.filter((p) => !p.isDemo);
+}
+
 export async function mergePatients({
   firestoreList,
   firestoreError,
@@ -25,7 +33,10 @@ export async function mergePatients({
     let merged = [...firestoreList];
     if (mergeLocalRaw) {
       try {
-        const localParsed = JSON.parse(mergeLocalRaw);
+        const localRawParsed = JSON.parse(mergeLocalRaw);
+        const localParsed = isGuestSource && Array.isArray(localRawParsed)
+          ? stripDemoPatients(localRawParsed)
+          : localRawParsed;
         if (Array.isArray(localParsed) && localParsed.length > 0) {
           merged = firestoreList.map((fPat) => {
             const localPat = localParsed.find((l) => l.id === fPat.id);
@@ -60,7 +71,8 @@ export async function mergePatients({
     const fallbackRaw = userLocalRaw || guestLocalRaw;
     if (fallbackRaw) {
       try {
-        const parsed = JSON.parse(fallbackRaw);
+        const rawParsed = JSON.parse(fallbackRaw);
+        const parsed = isGuestSource && Array.isArray(rawParsed) ? stripDemoPatients(rawParsed) : rawParsed;
         if (Array.isArray(parsed)) {
           debugLog(`[mergePatients] Fallback para dados locais: ${parsed.length} pacientes`);
           return { patients: parsed };
@@ -75,7 +87,8 @@ export async function mergePatients({
   const localSource = userLocalRaw || guestLocalRaw || null;
   if (localSource) {
     try {
-      const parsed = JSON.parse(localSource);
+      const rawParsed = JSON.parse(localSource);
+      const parsed = isGuestSource && Array.isArray(rawParsed) ? stripDemoPatients(rawParsed) : rawParsed;
       if (Array.isArray(parsed) && parsed.length > 0) {
         const syncResult = await syncPatientsToFirestore(parsed);
         if (syncResult.success) {

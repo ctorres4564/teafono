@@ -1,6 +1,34 @@
+import { initializeApp, getApps } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
+
+function getAdminApp() {
+  const existing = getApps();
+  if (existing.length > 0) return existing[0];
+  const projectId = process.env.VITE_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID;
+  return initializeApp({ projectId });
+}
+
+async function getVerifiedUid(req) {
+  const authHeader = req.headers.authorization || '';
+  const match = authHeader.match(/^Bearer (.+)$/);
+  if (!match) return null;
+  try {
+    const decoded = await getAuth(getAdminApp()).verifyIdToken(match[1]);
+    return decoded.uid;
+  } catch (err) {
+    console.error('[generate-pts] Token inválido:', err.message);
+    return null;
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const uid = await getVerifiedUid(req);
+  if (!uid) {
+    return res.status(401).json({ error: 'Não autenticado' });
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
@@ -40,7 +68,8 @@ Formate a saída como JSON com os seguintes campos: "planoDeIntervencao" (texto)
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }]
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { responseMimeType: 'application/json' }
       })
     });
 
@@ -62,10 +91,17 @@ Formate a saída como JSON com os seguintes campos: "planoDeIntervencao" (texto)
       return res.status(500).json({ error: 'Resposta inválida da IA' });
     }
 
-    const jsonMatch = text.match(/\{[^]*\}/g);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-      return res.status(200).json(parsed);
+    try {
+      return res.status(200).json(JSON.parse(text));
+    } catch {
+      const jsonMatch = text.match(/\{[^]*\}/);
+      if (jsonMatch) {
+        try {
+          return res.status(200).json(JSON.parse(jsonMatch[0]));
+        } catch (parseErr) {
+          console.error('[generate-pts] Falha ao parsear JSON extraído:', parseErr.message);
+        }
+      }
     }
 
     return res.status(500).json({ error: 'Formato de resposta inesperado' });

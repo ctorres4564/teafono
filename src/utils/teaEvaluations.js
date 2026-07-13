@@ -2,6 +2,7 @@
 export const mockTeaPatients = [
   {
     id: "tp1",
+    isDemo: true,
     name: "Arthur de Almeida Rezende",
     age: 4,
     gender: "Masculino",
@@ -33,6 +34,7 @@ export const mockTeaPatients = [
   },
   {
     id: "tp2",
+    isDemo: true,
     name: "Laura Viana Mendes",
     age: 2,
     gender: "Feminino",

@@ -259,7 +259,14 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
                   style={{ padding: '1rem', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderLeft: p.isSelected ? '4px solid var(--secondary-color)' : '4px solid transparent', background: p.isSelected ? 'rgba(139, 92, 246, 0.05)' : 'rgba(255,255,255,0.01)', marginBottom: '0.75rem' }}
                   onClick={() => { setIsEditing(false); onSelectPatient(p); }}>
                   <div>
-                    <h4 style={{ fontWeight: 700, fontSize: '0.95rem' }}>{p.name}</h4>
+                    <h4 style={{ fontWeight: 700, fontSize: '0.95rem' }}>
+                      {p.name}
+                      {p.isDemo && (
+                        <span style={{ marginLeft: '0.5rem', fontSize: '0.65rem', fontWeight: 700, color: 'var(--warning-color)', border: '1px solid var(--warning-color)', borderRadius: '999px', padding: '0.1rem 0.5rem' }}>
+                          EXEMPLO
+                        </span>
+                      )}
+                    </h4>
                     <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
                       {p.age} anos • {p.gender} • {p.diagnosis || "Sem queixa"}
                     </p>

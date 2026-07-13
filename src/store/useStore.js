@@ -383,7 +383,9 @@ const useStore = create(
                     set({ authLoading: false });
                     return;
                   }
-                } catch (_) { /* ignore */ }
+                } catch (err) {
+                  console.error('[initAuth] Erro ao ler localStorage (não-logado):', err);
+                }
               }
               set({ patients: [], activePatientId: null });
             }
