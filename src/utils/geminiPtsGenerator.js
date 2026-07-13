@@ -44,92 +44,38 @@ export async function generateOfflinePlan(patient, assessments) {
   };
 }
 
-export async function callGeminiApi(patient, assessments, apiKey) {
-  const prompt = `Você é uma fonoaudióloga especialista em TEA com vasta experiência clínica em plano de intervenção fonoaudiológica personalizado para autismo. Crie um plano de intervenção personalizado e detalhado baseado nos dados abaixo:
-
-**Dados do Paciente:**
-- Nome: ${patient.name}
-- Idade: ${patient.age} anos
-- Data de Nascimento: ${patient.birthDate}
-- Gênero: ${patient.gender}
-- Queixa Fonoaudiológica: ${patient.speechComplaint}
-
-**Resultados das Avaliações:**
-- M-CHAT-R/F Risco: ${assessments.mchat?.risk}
-- Perfil Pragmático: ${assessments.pragmatics?.ratePerMinute} atos/min, dominante: ${assessments.pragmatics?.predominantMean}
-- Seletividade Alimentar: ${assessments.bambi?.severity}
-
-**Tarefas:**
-1. Forneça um plano de intervenção fonoaudiológica personalizado com objetivos específicos, frequência e técnicas
-2. Ofereça estratégias motoras orais específicas para habilidades de fala 
-3. Inclua diretrizes de manejo alimentar específicas
-4. Forneça uma lista de verificação de marcos de acompanhamento
-
-Formate a saída como JSON com os seguintes campos: "planoDeIntervencao" (texto), "objetivos" (array), "frequencia" (texto), "tecnicas" (array), "habilidadesOrais" (texto), "estrategiasAlimentares" (texto), "acompanhamento" (array).`;
-
+export async function callGeminiApi(patient, assessments) {
   try {
-    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=' + apiKey, {
+    const response = await fetch('/api/generate-pts', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{ text: prompt }]
-        }]
-      })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patient, assessments })
     });
 
     if (!response.ok) {
-      let errorMessage = 'Erro na chamada da API';
-      let retryAfter = undefined;
-
-      if (response.status === 429) {
-        errorMessage = 'Limite de taxa excedido';
-        retryAfter = 5000;
-      } else if (response.status === 503) {
-        errorMessage = 'Serviço temporariamente indisponível';
-        retryAfter = 15000;
-      }
-
-      throw new GeminiApiError(errorMessage, response.status, retryAfter);
+      const body = await response.json().catch(() => ({}));
+      throw new GeminiApiError(
+        body.error || 'Erro na chamada da API',
+        response.status,
+        body.retryAfter
+      );
     }
 
-    const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    if (!text) {
-      throw new GeminiApiError('Resposta inválida da IA', 500);
-    }
-
-    const jsonMatch = text.match(/\{[^]*\}/g);
-    if (jsonMatch) {
-      const jsonStr = jsonMatch[0];
-      return JSON.parse(jsonStr);
-    }
-
-    const descriptionMatch = text.match(/"planoDeIntervencao"[^\s]+\[/g);
-    if (descriptionMatch) {
-      const objStr = descriptionMatch.join('').replace(/"\s*[^\s]*\[/g, ' ').replace(/]/g, ']').replace(/,/g, ',');
-      return JSON.parse(objStr);
-    }
-
-    throw new GeminiApiError('Formato de resposta inesperado', 500);
+    return await response.json();
 
   } catch (error) {
     if (error instanceof GeminiApiError) {
       throw error;
     }
-
     console.error('Erro na chamada da API Gemini:', error);
     throw new GeminiApiError('Falha interna da API', 500);
   }
 }
 
 export async function generatePts(patient, assessments, options = { useGemini: false }) {
-  if (options.useGemini && import.meta.env.VITE_GEMINI_API_KEY) {
+  if (options.useGemini) {
     try {
-      return await callGeminiApi(patient, assessments, import.meta.env.VITE_GEMINI_API_KEY);
+      return await callGeminiApi(patient, assessments);
     } catch (error) {
       console.error('Erro ao usar Gemini, usando plano offline:', error);
     }

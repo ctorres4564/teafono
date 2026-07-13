@@ -50,6 +50,15 @@ describe('saveAssessmentResults', () => {
     expect(patient.history[0].results.anamnese.queixa).toBe('atraso de fala');
   });
 
+  it('deve retornar success:true no modo convidado (sem currentUser/Firestore)', async () => {
+    getStore().addPatient({ name: 'Convidado', age: 4, gender: 'Feminino' });
+    const pid = getStore().patients[0].id;
+
+    const result = await getStore().saveAssessmentResults('anamnese', { queixa: 'atraso de fala' }, null, pid);
+
+    expect(result.success).toBe(true);
+  });
+
   it('deve preservar entradas existentes no history', async () => {
     getStore().addPatient({ name: 'João', age: 6, gender: 'Masculino' });
     const pid = getStore().patients[0].id;

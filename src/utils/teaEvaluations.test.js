@@ -4,7 +4,7 @@ import {
   calculatePragmatics,
   calculateBambiScore,
 } from './teaEvaluations';
-import { generateOfflinePlan, generatePts, GeminiApiError } from './geminiApiKeyGenerator';
+import { generateOfflinePlan, generatePts, GeminiApiError } from './geminiPtsGenerator';
 
 describe('Rastreio M-CHAT-R/F', () => {
   it('deve classificar como Baixo Risco se houver menos de 3 falhas', () => {

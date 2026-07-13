@@ -15,10 +15,15 @@ export default function AnamnesePage() {
       const state = useStore.getState();
       const result = await state.saveAssessmentResults(moduleName, results, id || entryId, patientId);
       if (result?.success) {
-        setSaveStatus('saved');
+        if (result.cloudSynced === false) {
+          console.warn('[AnamnesePage] Salvo localmente, mas falhou a sincronização com a nuvem.');
+          setSaveStatus('saved-offline');
+        } else {
+          setSaveStatus('saved');
+        }
         setTimeout(() => navigate('/dashboard'), 600);
       } else {
-        console.error('[AnamnesePage] Falha ao salvar no Firestore:', result?.error);
+        console.error('[AnamnesePage] Falha ao salvar:', result?.error);
         setSaveStatus('error');
         setTimeout(() => setSaveStatus(null), 4000);
       }
@@ -53,6 +58,18 @@ export default function AnamnesePage() {
           animation: 'fadeIn 0.3s ease',
         }}>
           Dados salvos com sucesso!
+        </div>
+      )}
+      {saveStatus === 'saved-offline' && (
+        <div style={{
+          position: 'fixed', top: '1rem', right: '1rem', zIndex: 9999,
+          padding: '1rem 1.5rem', borderRadius: '12px',
+          background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+          color: '#fff', fontWeight: 700, fontSize: '0.9rem',
+          boxShadow: '0 4px 20px rgba(245,158,11,0.4)',
+          animation: 'fadeIn 0.3s ease',
+        }}>
+          Dados salvos localmente. Sincronização com a nuvem falhou — tentaremos novamente mais tarde.
         </div>
       )}
       {saveStatus === 'error' && (

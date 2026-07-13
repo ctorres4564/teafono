@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Printer, Calendar, Sparkles, FileDown, Brain, Loader } from 'lucide-react';
-import { generatePts } from '../utils/geminiApiKeyGenerator';
+import { generatePts } from '../utils/geminiPtsGenerator';
 
 export default function ReportModule({ patient, assessmentId, therapistSettings, onBack }) {
   const assessment = patient.history.find(h => h.id === assessmentId);

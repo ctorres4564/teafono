@@ -1,3 +1,4 @@
+import { debugLog } from './utils/debug';
 import { initializeApp, getApps } from 'firebase/app';
 import { 
   getFirestore, 
@@ -37,7 +38,7 @@ if (isConfigValid) {
       app = initializeApp(firebaseConfig);
       db = getFirestore(app);
       auth = getAuth(app);
-      console.log("[Firebase] Firebase Auth e Firestore inicializados.");
+      debugLog("[Firebase] Firebase Auth e Firestore inicializados.");
     } else {
       app = getApps()[0];
       db = getFirestore(app);
@@ -47,7 +48,7 @@ if (isConfigValid) {
     console.error("[Firebase] Falha ao inicializar:", err);
   }
 } else {
-  console.log("[Firebase] Credenciais ausentes. Modo local.");
+  debugLog("[Firebase] Credenciais ausentes. Modo local.");
 }
 
 export function isFirebaseEnabled() {
@@ -84,7 +85,7 @@ export async function savePatientToFirestore(patient, userId) {
     const patientRef = doc(db, 'users', userId, 'patients', patient.id);
     const cleaned = removeUndefined(patient);
     await setDoc(patientRef, cleaned, { merge: true });
-    console.log(`[Firestore] Paciente ${patient.name} (${patient.id}) sincronizado.`);
+    debugLog(`[Firestore] Paciente ${patient.name} (${patient.id}) sincronizado.`);
     return { success: true };
   } catch (err) {
     console.error("[Firestore] Erro ao sincronizar paciente:", err.code, err.message);
@@ -96,7 +97,7 @@ export async function deletePatientFromFirestore(patientId, userId) {
   if (!db || !userId) return { success: false, error: 'Firestore não disponível' };
   try {
     await deleteDoc(doc(db, 'users', userId, 'patients', patientId));
-    console.log(`[Firestore] Paciente ${patientId} removido.`);
+    debugLog(`[Firestore] Paciente ${patientId} removido.`);
     return { success: true };
   } catch (err) {
     console.error("[Firestore] Erro ao deletar paciente:", err);
@@ -116,7 +117,7 @@ export async function loadPatientsFromFirestore(userId) {
       list.push(doc.data());
     });
     const sorted = list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-    console.log(`[Firestore] ${sorted.length} pacientes carregados para usuário ${userId}.`);
+    debugLog(`[Firestore] ${sorted.length} pacientes carregados para usuário ${userId}.`);
     return sorted;
   } catch (err) {
     console.error("[Firestore] Erro ao carregar pacientes:", err.code, err.message);

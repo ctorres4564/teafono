@@ -35,7 +35,7 @@ Sistema de avaliação e intervenção fonoaudiológica especializado no Transto
 
 1. Clone o repositório
 2. Copie `.env.example` para `.env` e preencha as credenciais do Firebase
-3. (Opcional) Configure `VITE_GEMINI_API_KEY` para o PTS com IA
+3. (Opcional) Configure `GEMINI_API_KEY` no Vercel (variável de ambiente server-side) para o PTS com IA
 4. Instale as dependências:
 
 ```bash
@@ -85,7 +85,7 @@ src/
 └── utils/
     ├── teaEvaluations.js    # Lógica de scoring + mock data
     ├── teaEvaluations.test.js # Testes unitários
-    └── geminiApiKeyGenerator.js # Integração Google Gemini
+    └── geminiPtsGenerator.js # Integração Google Gemini
 ```
 
 ## Protocolos Científicos

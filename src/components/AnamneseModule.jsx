@@ -163,11 +163,15 @@ export default function AnamneseModule({ patient, onBack, onSaveAssessment, init
     }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const latestForm = formRef.current;
     if (!latestForm.identification.name && !window.confirm('Nome da criança não preenchido. Deseja salvar mesmo assim?')) return;
     setSaving(true);
-    onSaveAssessment('anamnese', latestForm, entryId);
+    try {
+      await onSaveAssessment('anamnese', latestForm, entryId);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const renderField = (label, value, onChange, type = 'text', placeholder = '', opts = null) => (
