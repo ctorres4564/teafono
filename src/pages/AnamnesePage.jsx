@@ -8,6 +8,13 @@ export default function AnamnesePage() {
   const navigate = useNavigate();
   const patient = useStore((s) => s.patients.find((p) => p.id === patientId));
 
+  window.__TEAFONO_DEBUG_PATIENT = patient;
+
+  console.log(
+    '[DIAGNÓSTICO] HISTORY[0].RESULTS JSON:',
+    JSON.stringify(patient?.history?.[0]?.results ?? null, null, 2)
+  );
+
   console.log(`[DIAGNÓSTICO] 🎯 ANAMNESEPAGE RENDERIZADO - ENTRADA`, {
     timestamp: new Date().toISOString(),
     patientId,
