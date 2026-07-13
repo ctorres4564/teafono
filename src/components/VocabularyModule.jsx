@@ -6,7 +6,7 @@ import {
   VOCABULARY_RESPONSE_TYPES,
 } from '../store/assessments/items/vocabularyItems';
 
-export default function VocabularyModule({ patient, onBack, onSaveAssessment }) {
+export default function VocabularyModule({ patient, onBack, onSaveAssessment, isSaving }) {
   const [selectedModality, setSelectedModality] = useState(VOCABULARY_MODALITIES[0].id);
   const [selectedCategory, setSelectedCategory] = useState(VOCABULARY_CATEGORIES[0].id);
   const [responses, setResponses] = useState({});
@@ -127,7 +127,7 @@ export default function VocabularyModule({ patient, onBack, onSaveAssessment }) 
             return `Registradas: ${summary.total} | Corretas: ${summary.correct} | Substituições: ${summary.substitutions} | Sem resposta: ${summary.noResponse}`;
           })()}
         </div>
-        <button className="btn btn-primary" onClick={handleSave} style={{ height: '44px' }}>
+        <button className="btn btn-primary" onClick={handleSave} disabled={isSaving} style={{ height: '44px' }}>
           Finalizar e Salvar Vocabulário
         </button>
       </div>

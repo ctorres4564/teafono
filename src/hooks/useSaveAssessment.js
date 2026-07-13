@@ -10,6 +10,8 @@ export default function useSaveAssessment({ patientId, entryId, onSaved } = {}) 
   const [saveStatus, setSaveStatus] = useState(null);
 
   const handleSave = useCallback(async (moduleName, results, id) => {
+    if (saveStatus === 'saving') return { success: false, error: 'Save already in progress' };
+
     setSaveStatus('saving');
     try {
       const result = await useStore.getState().saveAssessmentResults(moduleName, results, id || entryId, patientId);
@@ -28,7 +30,7 @@ export default function useSaveAssessment({ patientId, entryId, onSaved } = {}) 
       setTimeout(() => setSaveStatus(null), 4000);
       return { success: false, error: err.message };
     }
-  }, [patientId, entryId, onSaved]);
+  }, [patientId, entryId, onSaved, saveStatus]);
 
   return { saveStatus, handleSave };
 }

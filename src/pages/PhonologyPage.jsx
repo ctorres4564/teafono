@@ -26,6 +26,7 @@ export default function PhonologyPage() {
         patient={patient}
         onBack={() => navigate('/dashboard')}
         onSaveAssessment={handleSave}
+        isSaving={saveStatus === 'saving'}
       />
     </div>
   );

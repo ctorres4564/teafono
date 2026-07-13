@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { calculateMchatScore } from '../utils/teaEvaluations';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
 
-export default function MchatModule({ patient, onBack, onSaveAssessment }) {
+export default function MchatModule({ patient, onBack, onSaveAssessment, isSaving }) {
   const mchatQuestions = [
     { id: 1, text: "Se você apontar para alguma coisa do outro lado da sala, seu filho olha para ela? (Ex: olha para um brinquedo ou animal que você apontou)" },
     { id: 2, text: "Você já se perguntou se seu filho poderia ser surdo?" },
@@ -90,7 +90,7 @@ export default function MchatModule({ patient, onBack, onSaveAssessment }) {
         ))}
       </div>
 
-      <button className="btn btn-primary" onClick={handleSave} style={{ alignSelf: 'flex-end', width: '220px', height: '48px' }}>
+      <button className="btn btn-primary" onClick={handleSave} disabled={isSaving} style={{ alignSelf: 'flex-end', width: '220px', height: '48px' }}>
         <CheckCircle size={18} /> Salvar Triagem M-CHAT
       </button>
     </div>

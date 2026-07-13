@@ -27,6 +27,7 @@ export default function FluencyPage() {
         mode={mode || 'verbal'}
         onBack={() => navigate('/dashboard')}
         onSaveAssessment={handleSave}
+        isSaving={saveStatus === 'saving'}
       />
     </div>
   );

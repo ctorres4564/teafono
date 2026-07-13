@@ -4,7 +4,7 @@ import AssessmentTimer from './shared/AssessmentTimer';
 import AssessmentSummary from './shared/AssessmentSummary';
 import { FLUENCY_VERBAL_CATEGORIES, FLUENCY_SPEECH_DISFLUENCIES, FLUENCY_TRANSCRIPTION_FIELDS } from '../store/assessments/items/fluencyItems';
 
-export default function FluencyModule({ patient, onBack, onSaveAssessment, mode = 'verbal' }) {
+export default function FluencyModule({ patient, onBack, onSaveAssessment, mode = 'verbal', isSaving }) {
   const isVerbal = mode === 'verbal';
   const [selectedCategory, setSelectedCategory] = useState(isVerbal ? FLUENCY_VERBAL_CATEGORIES[0].id : null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -150,7 +150,7 @@ export default function FluencyModule({ patient, onBack, onSaveAssessment, mode 
           ...(totalCount > 0 ? [{ label: isVerbal ? 'Palavras/min' : 'Descontinuidades/min', value: `${rate}`, highlight: true }] : []),
         ]}
       >
-        <button className="btn btn-primary" onClick={handleSave} style={{ marginTop: '0.5rem', height: '44px' }}>
+        <button className="btn btn-primary" onClick={handleSave} disabled={isSaving} style={{ marginTop: '0.5rem', height: '44px' }}>
           Finalizar e Salvar {isVerbal ? 'Fluência Verbal' : 'Fluência da Fala'}
         </button>
       </AssessmentSummary>

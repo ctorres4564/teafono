@@ -30,6 +30,7 @@ export default function BambiPage() {
         patient={patient}
         onBack={() => navigate('/dashboard')}
         onSaveAssessment={handleSaveAssessment}
+        isSaving={saveStatus === 'saving'}
       />
     </div>
   );

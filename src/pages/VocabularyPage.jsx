@@ -26,6 +26,7 @@ export default function VocabularyPage() {
         patient={patient}
         onBack={() => navigate('/dashboard')}
         onSaveAssessment={handleSave}
+        isSaving={saveStatus === 'saving'}
       />
     </div>
   );

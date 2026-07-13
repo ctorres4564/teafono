@@ -36,6 +36,7 @@ export default function AnamnesePage() {
         entryId={entryId || null}
         onBack={() => navigate('/dashboard')}
         onSaveAssessment={handleSave}
+        isSaving={saveStatus === 'saving'}
       />
     </div>
   );

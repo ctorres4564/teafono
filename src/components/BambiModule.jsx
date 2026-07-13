@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { calculateBambiScore } from '../utils/teaEvaluations';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
 
-export default function BambiModule({ patient, onBack, onSaveAssessment }) {
+export default function BambiModule({ patient, onBack, onSaveAssessment, isSaving }) {
   const bambiQuestions = [
     { id: 1, text: "A criança se recusa a comer novos alimentos (neofobia alimentar)?" },
     { id: 2, text: "A criança se recusa a comer os mesmos alimentos que o restante da família consome?" },
@@ -100,7 +100,7 @@ export default function BambiModule({ patient, onBack, onSaveAssessment }) {
         <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
           Escore Atual Acumulado: <strong>{currentTotal} / 90 pontos</strong>
         </span>
-        <button className="btn btn-primary" onClick={handleSave} style={{ width: '220px', height: '48px' }}>
+        <button className="btn btn-primary" onClick={handleSave} disabled={isSaving} style={{ width: '220px', height: '48px' }}>
           <CheckCircle size={18} /> Salvar Avaliação BAMBI
         </button>
       </div>

@@ -10,7 +10,7 @@ const PRODUCTION_OPTIONS = [
   { id: 'distorted', label: 'Distorcida', color: '#f97316' },
 ];
 
-export default function PhonologyModule({ patient, onBack, onSaveAssessment }) {
+export default function PhonologyModule({ patient, onBack, onSaveAssessment, isSaving }) {
   const [productions, setProductions] = useState(() => {
     return PHONOLOGY_WORDS.map(w => ({
       ...w,
@@ -158,7 +158,7 @@ export default function PhonologyModule({ patient, onBack, onSaveAssessment }) {
             </div>
           );
         })()}
-        <button className="btn btn-primary" onClick={handleSave} style={{ marginTop: '0.5rem', height: '44px' }} disabled={!allFilled}>
+        <button className="btn btn-primary" onClick={handleSave} disabled={!allFilled || isSaving} style={{ marginTop: '0.5rem', height: '44px' }}>
           Finalizar e Salvar Fonologia
         </button>
       </AssessmentSummary>
