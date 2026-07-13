@@ -80,44 +80,70 @@ const removeUndefinedFields = (value) => {
 };
 
 export async function savePatientToFirestore(patient, userId) {
-  if (!db || !userId || !patient?.id) return;
-  try {
-    const patientRef = doc(db, 'users', userId, 'patients', patient.id);
-    await setDoc(patientRef, removeUndefinedFields(patient), { merge: true });
-    console.log(`Paciente ${patient.name} (${patient.id}) sincronizado na nuvem para o usuário ${userId}.`);
-  } catch (err) {
-    console.error("Erro ao sincronizar paciente no Firestore:", err);
+  if (!db) {
+    throw new Error('Firestore não inicializado. Verifique as variáveis VITE_FIREBASE_* em produção.');
   }
+  if (!userId) {
+    throw new Error('Usuário ausente para salvar paciente.');
+  }
+  if (!patient?.id) {
+    throw new Error('Paciente sem ID não pode ser sincronizado no Firestore.');
+  }
+
+  const patientRef = doc(db, 'users', userId, 'patients', patient.id);
+  await setDoc(patientRef, removeUndefinedFields(patient), { merge: true });
+  console.log(`Paciente ${patient.name} (${patient.id}) sincronizado na nuvem para o usuário ${userId}.`);
+  return { ok: true, path: `users/${userId}/patients/${patient.id}` };
 }
 
 /**
  * Remove um paciente do Firestore pelo ID sob o UID do usuário
  */
 export async function deletePatientFromFirestore(patientId, userId) {
-  if (!db || !userId) return;
-  try {
-    await deleteDoc(doc(db, 'users', userId, 'patients', patientId));
-    console.log(`Paciente ${patientId} removido da nuvem para o usuário ${userId}.`);
-  } catch (err) {
-    console.error("Erro ao deletar paciente do Firestore:", err);
+  if (!db) {
+    throw new Error('Firestore não inicializado.');
   }
+  if (!userId) {
+    throw new Error('Usuário ausente para remover paciente.');
+  }
+  if (!patientId) {
+    throw new Error('ID do paciente ausente para remoção.');
+  }
+
+  await deleteDoc(doc(db, 'users', userId, 'patients', patientId));
+  console.log(`Paciente ${patientId} removido da nuvem para o usuário ${userId}.`);
+  return { ok: true };
 }
 
 /**
  * Carrega a lista completa de pacientes do Firestore sob o UID do usuário
  */
 export async function loadPatientsFromFirestore(userId) {
-  if (!db || !userId) return [];
+  if (!db) {
+    return { ok: false, patients: [], error: new Error('Firestore não inicializado.'), source: 'firestore' };
+  }
+  if (!userId) {
+    return { ok: false, patients: [], error: new Error('Usuário ausente para carregar pacientes.'), source: 'firestore' };
+  }
+
   try {
     const querySnapshot = await getDocs(collection(db, 'users', userId, 'patients'));
     const list = [];
-    querySnapshot.forEach((doc) => {
-      list.push(doc.data());
+    querySnapshot.forEach((patientDoc) => {
+      const data = patientDoc.data();
+      list.push({
+        id: data.id || patientDoc.id,
+        ...data,
+      });
     });
     // Ordena pela data de criação decrescente
-    return list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    return {
+      ok: true,
+      patients: list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)),
+      source: `users/${userId}/patients`,
+    };
   } catch (err) {
     console.error("Erro ao carregar pacientes do Firestore. Fallback local.", err);
-    return [];
+    return { ok: false, patients: [], error: err, source: 'firestore' };
   }
 }

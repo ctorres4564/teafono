@@ -12,6 +12,7 @@ export default function DashboardPage() {
     addPatient,
     deletePatient,
     updatePatient,
+    savePatientAnamnesis,
     importBackupList,
   } = useStore();
 
@@ -43,6 +44,7 @@ export default function DashboardPage() {
       onAddPatient={(data) => addPatient(data)}
       onDeletePatient={(id) => deletePatient(id)}
       onUpdatePatient={(data) => updatePatient(data)}
+      onSaveAnamnesis={(patientId, data) => savePatientAnamnesis(patientId, data)}
       onImportBackup={(list) => importBackupList(list)}
       onStartAssessment={handleStartAssessment}
       onViewReport={handleViewReport}

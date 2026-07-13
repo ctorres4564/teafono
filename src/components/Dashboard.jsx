@@ -13,6 +13,29 @@ const calculateAge = (birthDateString) => {
   return age < 0 ? 0 : age;
 };
 
+const ANAMNESIS_FIELDS = [
+  { key: 'guardianName', label: 'Responsável principal', type: 'input' },
+  { key: 'guardianPhone', label: 'Telefone do responsável', type: 'input' },
+  { key: 'guardianEmail', label: 'E-mail do responsável', type: 'input' },
+  { key: 'pregnancyHistory', label: 'Histórico gestacional' },
+  { key: 'birthHistory', label: 'Histórico do parto' },
+  { key: 'developmentHistory', label: 'Desenvolvimento neuropsicomotor' },
+  { key: 'languageDevelopment', label: 'Desenvolvimento de linguagem' },
+  { key: 'feedingHistory', label: 'Histórico alimentar' },
+  { key: 'sleepHistory', label: 'Sono' },
+  { key: 'medicalHistory', label: 'Histórico médico' },
+  { key: 'familyHistory', label: 'Histórico familiar' },
+  { key: 'schoolHistory', label: 'Histórico escolar' },
+  { key: 'sensoryProfile', label: 'Perfil sensorial' },
+  { key: 'mainConcerns', label: 'Principais preocupações da família' },
+  { key: 'observations', label: 'Observações clínicas' },
+];
+
+const createEmptyAnamnesis = () => ANAMNESIS_FIELDS.reduce((acc, field) => ({
+  ...acc,
+  [field.key]: '',
+}), {});
+
 function PragmaticsChart({ history }) {
   const [ChartComponents, setChartComponents] = useState(null);
 
@@ -77,7 +100,7 @@ function PragmaticsChart({ history }) {
   );
 }
 
-export default function Dashboard({ patients, activePatientId, onSelectPatient, onAddPatient, onDeletePatient, onUpdatePatient, onImportBackup, onStartAssessment, onViewReport, onGoToCaa }) {
+export default function Dashboard({ patients, activePatientId, onSelectPatient, onAddPatient, onDeletePatient, onUpdatePatient, onSaveAnamnesis, onImportBackup, onStartAssessment, onViewReport, onGoToCaa }) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newName, setNewName] = useState('');
   const [newAge, setNewAge] = useState('');
@@ -94,6 +117,8 @@ export default function Dashboard({ patients, activePatientId, onSelectPatient, 
   const [editGender, setEditGender] = useState('Masculino');
   const [editDiagnosis, setEditDiagnosis] = useState('');
   const [editSpeechComplaint, setEditSpeechComplaint] = useState('');
+  const [editAnamnesis, setEditAnamnesis] = useState(createEmptyAnamnesis);
+  const [saveStatus, setSaveStatus] = useState(null);
 
   const handleBirthDateChange = (dateVal) => {
     setNewBirthDate(dateVal);
@@ -119,6 +144,8 @@ export default function Dashboard({ patients, activePatientId, onSelectPatient, 
     setEditGender(selectedPatient.gender || 'Masculino');
     setEditDiagnosis(selectedPatient.diagnosis || '');
     setEditSpeechComplaint(selectedPatient.speechComplaint || '');
+    setEditAnamnesis({ ...createEmptyAnamnesis(), ...(selectedPatient.anamnesis || {}) });
+    setSaveStatus(null);
     setIsEditing(true);
   };
 
@@ -128,13 +155,33 @@ export default function Dashboard({ patients, activePatientId, onSelectPatient, 
     setEditAge(calculated !== '' ? String(calculated) : '');
   };
 
-  const handleEditSubmit = (e) => {
+  const handleAnamnesisFieldChange = (key, value) => {
+    setEditAnamnesis((current) => ({ ...current, [key]: value }));
+  };
+
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!editName || !editAge) return;
-    onUpdatePatient({
+    setSaveStatus({ type: 'saving', message: 'Salvando ficha e anamnese...' });
+    const patientResult = await onUpdatePatient({
       id: selectedPatient.id, name: editName, age: Number(editAge),
-      gender: editGender, diagnosis: editDiagnosis, birthDate: editBirthDate, speechComplaint: editSpeechComplaint
+      gender: editGender, diagnosis: editDiagnosis, birthDate: editBirthDate, speechComplaint: editSpeechComplaint,
+      anamnesis: editAnamnesis,
     });
+    if (patientResult && !patientResult.ok) {
+      setSaveStatus({ type: 'error', message: 'Erro ao salvar ficha. Verifique a conexão e tente novamente.' });
+      return;
+    }
+
+    if (onSaveAnamnesis) {
+      const result = await onSaveAnamnesis(selectedPatient.id, editAnamnesis);
+      if (!result?.ok) {
+        setSaveStatus({ type: 'error', message: 'Erro ao salvar anamnese. Verifique a conexão e tente novamente.' });
+        return;
+      }
+    }
+
+    setSaveStatus({ type: 'success', message: 'Ficha e anamnese salvas com sucesso.' });
     setIsEditing(false);
   };
 
@@ -328,6 +375,45 @@ export default function Dashboard({ patients, activePatientId, onSelectPatient, 
                   <textarea value={editSpeechComplaint} onChange={e => setEditSpeechComplaint(e.target.value)} rows={3}
                     style={{ width: '100%', padding: '0.65rem 0.8rem', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '0.9rem', resize: 'vertical' }} />
                 </div>
+
+                <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <h4 style={{ fontWeight: 700, fontSize: '0.95rem' }}>Anamnese</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+                    {ANAMNESIS_FIELDS.map((field) => (
+                      <div className="form-group" key={field.key}>
+                        <label>{field.label}</label>
+                        {field.type === 'input' ? (
+                          <input
+                            type={field.key === 'guardianEmail' ? 'email' : 'text'}
+                            value={editAnamnesis[field.key] || ''}
+                            onChange={e => handleAnamnesisFieldChange(field.key, e.target.value)}
+                          />
+                        ) : (
+                          <textarea
+                            value={editAnamnesis[field.key] || ''}
+                            onChange={e => handleAnamnesisFieldChange(field.key, e.target.value)}
+                            rows={3}
+                            style={{ width: '100%', padding: '0.65rem 0.8rem', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '0.9rem', resize: 'vertical' }}
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {saveStatus && (
+                  <div style={{
+                    padding: '0.75rem',
+                    borderRadius: '8px',
+                    fontSize: '0.85rem',
+                    color: saveStatus.type === 'error' ? 'var(--danger-color)' : 'var(--success-color)',
+                    border: `1px solid ${saveStatus.type === 'error' ? 'rgba(239,68,68,0.25)' : 'rgba(16,185,129,0.25)'}`,
+                    background: saveStatus.type === 'error' ? 'rgba(239,68,68,0.08)' : 'rgba(16,185,129,0.08)'
+                  }}>
+                    {saveStatus.message}
+                  </div>
+                )}
+
                 <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
                   <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Salvar Alterações</button>
                   <button type="button" className="btn btn-secondary" onClick={() => setIsEditing(false)}>Cancelar</button>
@@ -354,6 +440,16 @@ export default function Dashboard({ patients, activePatientId, onSelectPatient, 
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.25rem', padding: '0.5rem', background: 'rgba(255,255,255,0.02)', borderRadius: '6px', borderLeft: '3px solid var(--secondary-color)' }}>
                       <strong>Queixa Fonoaudiológica:</strong> {selectedPatient.speechComplaint}
                     </p>
+                  )}
+                  {selectedPatient.anamnesis && ANAMNESIS_FIELDS.some(field => selectedPatient.anamnesis?.[field.key]) && (
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.25rem', padding: '0.75rem', background: 'rgba(255,255,255,0.02)', borderRadius: '6px', borderLeft: '3px solid var(--primary-color)' }}>
+                      <strong>Anamnese:</strong>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginTop: '0.5rem' }}>
+                        {ANAMNESIS_FIELDS.filter(field => selectedPatient.anamnesis?.[field.key]).map(field => (
+                          <span key={field.key}><strong>{field.label}:</strong> {selectedPatient.anamnesis[field.key]}</span>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
 

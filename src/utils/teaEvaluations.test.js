@@ -233,3 +233,35 @@ describe('calculateAge (via Dashboard logic)', () => {
     expect(calculateAge(undefined)).toBe('');
   });
 });
+
+describe('Persistência de anamnese do paciente', () => {
+  it('normalizePatient deve garantir history array e objeto anamnesis', async () => {
+    const { normalizePatient } = await import('../store/useStore');
+    const patient = normalizePatient({ id: 'p1', name: 'Teste', history: null });
+
+    expect(patient.history).toEqual([]);
+    expect(patient.anamnesis).toBeDefined();
+    expect(patient.anamnesis.guardianName).toBe('');
+  });
+
+  it('mergePatientAnamnesis deve preservar campos existentes e atualizar parcialmente', async () => {
+    const { mergePatientAnamnesis } = await import('../store/useStore');
+    const patient = {
+      id: 'p1',
+      name: 'Teste',
+      history: [],
+      anamnesis: {
+        guardianName: 'Responsável A',
+        pregnancyHistory: 'Sem intercorrências',
+      },
+    };
+
+    const updated = mergePatientAnamnesis(patient, { feedingHistory: 'Seletividade alimentar' });
+
+    expect(updated.anamnesis.guardianName).toBe('Responsável A');
+    expect(updated.anamnesis.pregnancyHistory).toBe('Sem intercorrências');
+    expect(updated.anamnesis.feedingHistory).toBe('Seletividade alimentar');
+    expect(updated.updatedAt).toBeTruthy();
+    expect(updated.anamnesis.updatedAt).toBeTruthy();
+  });
+});

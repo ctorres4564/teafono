@@ -11,9 +11,49 @@ import {
   onAuthStateChanged,
 } from '../firebase';
 
-const normalizePatient = (patient) => ({
+export const createDefaultAnamnesis = () => ({
+  guardianName: '',
+  guardianPhone: '',
+  guardianEmail: '',
+  pregnancyHistory: '',
+  birthHistory: '',
+  neonatalHistory: '',
+  developmentHistory: '',
+  languageDevelopment: '',
+  feedingHistory: '',
+  sleepHistory: '',
+  medicalHistory: '',
+  medicationUse: '',
+  allergies: '',
+  familyHistory: '',
+  schoolHistory: '',
+  socialInteraction: '',
+  sensoryProfile: '',
+  mainConcerns: '',
+  observations: '',
+});
+
+const normalizeAnamnesis = (anamnesis = {}) => ({
+  ...createDefaultAnamnesis(),
+  ...anamnesis,
+});
+
+export const normalizePatient = (patient = {}) => ({
   ...patient,
+  id: patient.id,
+  name: patient.name || '',
   history: Array.isArray(patient.history) ? patient.history : [],
+  anamnesis: normalizeAnamnesis(patient.anamnesis),
+});
+
+export const mergePatientAnamnesis = (patient, anamnesisData) => ({
+  ...normalizePatient(patient),
+  anamnesis: {
+    ...normalizeAnamnesis(patient?.anamnesis),
+    ...anamnesisData,
+    updatedAt: new Date().toISOString(),
+  },
+  updatedAt: new Date().toISOString(),
 });
 
 const useStore = create(
@@ -66,22 +106,29 @@ const useStore = create(
         }
       },
 
-      persistPatients: (updatedList) => {
+      persistPatients: async (updatedList) => {
         const sanitizedList = updatedList.map(normalizePatient);
         set({ patients: sanitizedList });
         const { currentUser } = get();
-        if (currentUser) {
-          localStorage.setItem(
-            `teafono_patients_${currentUser.uid}`,
-            JSON.stringify(sanitizedList)
-          );
-          if (isFirebaseEnabled()) {
-            sanitizedList.forEach((patient) => {
-              savePatientToFirestore(patient, currentUser.uid);
-            });
+
+        try {
+          if (currentUser) {
+            localStorage.setItem(
+              `teafono_patients_${currentUser.uid}`,
+              JSON.stringify(sanitizedList)
+            );
+            if (isFirebaseEnabled()) {
+              await Promise.all(
+                sanitizedList.map((patient) => savePatientToFirestore(patient, currentUser.uid))
+              );
+            }
+          } else {
+            localStorage.setItem('teafono_patients', JSON.stringify(sanitizedList));
           }
-        } else {
-          localStorage.setItem('teafono_patients', JSON.stringify(sanitizedList));
+          return { ok: true };
+        } catch (error) {
+          console.error('Erro ao persistir pacientes:', error);
+          return { ok: false, error };
         }
       },
 
@@ -94,7 +141,7 @@ const useStore = create(
         get().persistPatients(updated);
       },
 
-      addPatient: (newPatData) => {
+      addPatient: async (newPatData) => {
         const newPat = {
           id: 'tp_' + Date.now(),
           name: newPatData.name?.trim(),
@@ -105,11 +152,14 @@ const useStore = create(
           speechComplaint: newPatData.speechComplaint?.trim() || '',
           createdAt: new Date().toISOString(),
           history: [],
+          anamnesis: normalizeAnamnesis(newPatData.anamnesis),
+          createdBy: get().currentUser?.uid || null,
+          updatedAt: new Date().toISOString(),
           isSelected: true,
         };
         const updated = [newPat, ...get().patients.map((p) => ({ ...p, isSelected: false }))];
         set({ activePatientId: newPat.id });
-        get().persistPatients(updated);
+        return get().persistPatients(updated);
       },
 
       deletePatient: (id) => {
@@ -121,26 +171,31 @@ const useStore = create(
         }
         get().persistPatients(updated);
         if (isFirebaseEnabled() && currentUser) {
-          deletePatientFromFirestore(id, currentUser.uid);
+          deletePatientFromFirestore(id, currentUser.uid).catch((error) => {
+            console.error('Erro ao remover paciente no Firestore:', error);
+          });
         }
       },
 
-      updatePatient: (updatedPatData) => {
+      updatePatient: async (updatedPatData) => {
         const updated = get().patients.map((p) => {
           if (p.id === updatedPatData.id) {
             return {
               ...p,
               ...updatedPatData,
-              name: updatedPatData.name?.trim(),
-              age: updatedPatData.age,
-              diagnosis: updatedPatData.diagnosis?.trim() || '',
-              birthDate: updatedPatData.birthDate || '',
-              speechComplaint: updatedPatData.speechComplaint?.trim() || '',
+              name: updatedPatData.name !== undefined ? updatedPatData.name?.trim() : p.name,
+              age: updatedPatData.age !== undefined ? updatedPatData.age : p.age,
+              gender: updatedPatData.gender !== undefined ? updatedPatData.gender : p.gender,
+              diagnosis: updatedPatData.diagnosis !== undefined ? updatedPatData.diagnosis?.trim() : (p.diagnosis || ''),
+              birthDate: updatedPatData.birthDate !== undefined ? updatedPatData.birthDate : (p.birthDate || ''),
+              speechComplaint: updatedPatData.speechComplaint !== undefined ? updatedPatData.speechComplaint?.trim() : (p.speechComplaint || ''),
+              anamnesis: normalizeAnamnesis(updatedPatData.anamnesis || p.anamnesis),
+              updatedAt: new Date().toISOString(),
             };
           }
           return p;
         });
-        get().persistPatients(updated);
+        return get().persistPatients(updated);
       },
 
       importBackupList: (importedList) => {
@@ -178,6 +233,34 @@ const useStore = create(
         get().persistPatients(updatedPatients);
       },
 
+
+      savePatientAnamnesis: async (patientId, anamnesisData) => {
+        const { patients, currentUser } = get();
+        const patient = patients.find((p) => p.id === patientId);
+        if (!patient) {
+          return { ok: false, error: new Error('Paciente não encontrado para salvar anamnese.') };
+        }
+
+        const updatedPatient = mergePatientAnamnesis(patient, anamnesisData);
+        const updatedPatients = patients.map((p) => (p.id === patientId ? updatedPatient : p));
+        set({ patients: updatedPatients, activePatientId: patientId });
+
+        try {
+          if (currentUser) {
+            localStorage.setItem(`teafono_patients_${currentUser.uid}`, JSON.stringify(updatedPatients));
+            if (isFirebaseEnabled()) {
+              await savePatientToFirestore(updatedPatient, currentUser.uid);
+            }
+          } else {
+            localStorage.setItem('teafono_patients', JSON.stringify(updatedPatients));
+          }
+          return { ok: true, patient: updatedPatient };
+        } catch (error) {
+          console.error('Erro ao salvar anamnese:', error);
+          return { ok: false, error };
+        }
+      },
+
       viewReport: (reportId) => {
         set({ activeReportId: reportId });
       },
@@ -213,14 +296,17 @@ const useStore = create(
           set({ authLoading: true });
           if (user) {
             set({ currentUser: user, isGuestMode: false });
-            const firestoreList = await loadPatientsFromFirestore(user.uid);
-            if (firestoreList && firestoreList.length > 0) {
-              const normalizedList = firestoreList.map(normalizePatient);
+            const firestoreResult = await loadPatientsFromFirestore(user.uid);
+            if (firestoreResult.ok && firestoreResult.patients.length > 0) {
+              const normalizedList = firestoreResult.patients.map(normalizePatient);
               set({ patients: normalizedList });
               localStorage.setItem(`teafono_patients_${user.uid}`, JSON.stringify(normalizedList));
               const selected = normalizedList.find((p) => p.isSelected) || normalizedList[0];
               if (selected) set({ activePatientId: selected.id });
             } else {
+              if (!firestoreResult.ok) {
+                console.warn('Falha ao carregar Firestore; usando fallback local se disponível.', firestoreResult.error);
+              }
               const userStored = localStorage.getItem(`teafono_patients_${user.uid}`);
               if (userStored) {
                 const normalizedList = JSON.parse(userStored).map(normalizePatient);
@@ -240,14 +326,14 @@ const useStore = create(
                     const normalizedList = parsed.map(normalizePatient);
                     set({ patients: normalizedList });
                     localStorage.setItem(`teafono_patients_${user.uid}`, JSON.stringify(normalizedList));
-                    normalizedList.forEach((pat) => {
-                      savePatientToFirestore(pat, user.uid);
+                    Promise.all(normalizedList.map((pat) => savePatientToFirestore(pat, user.uid))).catch((error) => {
+                      console.error('Erro ao sincronizar fichas locais migradas:', error);
                     });
                     localStorage.removeItem('teafono_patients');
-                  } else {
+                  } else if (firestoreResult.ok) {
                     set({ patients: [], activePatientId: null });
                   }
-                } else {
+                } else if (firestoreResult.ok) {
                   set({ patients: [], activePatientId: null });
                 }
               }
