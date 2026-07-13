@@ -253,16 +253,22 @@ const useStore = create(
         const key = getStorageKey(get().currentUser);
         const savedRaw = localStorage.getItem(key);
         let savedOk = false;
+        console.log(`[saveAssessmentResults DEBUG] chave='${key}', savedRaw existe=${!!savedRaw}, tamanho=${savedRaw?.length || 0} bytes`);
         if (savedRaw) {
           try {
             const savedParsed = JSON.parse(savedRaw);
             const savedPat = savedParsed.find((p) => p.id === pid);
             if (savedPat && Array.isArray(savedPat.history) && savedPat.history.some((h) => h.id === evalId)) {
               savedOk = true;
+              console.log(`[saveAssessmentResults DEBUG] ✅ Encontrado no localStorage: ${moduleName} para ${pid}`);
+            } else {
+              console.log(`[saveAssessmentResults DEBUG] ❌ Não encontrado: savedPat=${!!savedPat}, history=${savedPat?.history?.length}, evalId buscado=${evalId}`);
             }
           } catch (parseErr) {
             console.error('[saveAssessmentResults] Erro ao verificar localStorage:', parseErr);
           }
+        } else {
+          console.log(`[saveAssessmentResults DEBUG] ❌ localStorage vazio para chave='${key}'`);
         }
         debugLog(`[saveAssessmentResults] ${moduleName} salvo para paciente ${pid} (entry: ${evalId}) - localStorage verificado: ${savedOk}`);
 
