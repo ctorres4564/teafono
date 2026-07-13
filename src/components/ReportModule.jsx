@@ -164,7 +164,8 @@ export default function ReportModule({ patient, assessmentId, therapistSettings,
       try {
         const fallback = await generatePts(patient, results, { useGemini: false });
         setPtsData(fallback);
-      } catch (_fallbackErr) {
+      } catch (fallbackErr) {
+        console.error('Erro ao gerar PTS offline:', fallbackErr);
         setPtsError('Não foi possível gerar o PTS. Tente novamente mais tarde.');
       }
     } finally {

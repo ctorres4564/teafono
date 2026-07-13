@@ -196,6 +196,7 @@ const useStore = create(
         const { patients, activePatientId } = get();
         const pid = patientId || activePatientId;
         debugLog(`[saveAssessmentResults] iniciando: moduleName=${moduleName}, pid=${pid}, entryId=${entryId}, patients.length=${patients.length}`);
+        console.log(`[DIAGNÓSTICO] 📥 PAYLOAD RECEBIDO:`, { moduleName, resultsKeys: Object.keys(results || {}), resultsSize: JSON.stringify(results).length });
         if (!pid) { console.error('[saveAssessmentResults] Nenhum patientId disponível'); return { success: false, error: 'Nenhum patientId' }; }
         const patientIdx = patients.findIndex((p) => p.id === pid);
         if (patientIdx === -1) { console.error('[saveAssessmentResults] Paciente não encontrado:', pid); return { success: false, error: 'Paciente não encontrado' }; }
@@ -218,6 +219,7 @@ const useStore = create(
           console.error('[saveAssessmentResults] Erro ao clonar results:', e);
           resultsCopy = { ...results };
         }
+        console.log(`[DIAGNÓSTICO] 🔄 APÓS CLONE:`, { resultsCopyKeys: Object.keys(resultsCopy || {}), resultsCopySize: JSON.stringify(resultsCopy).length });
 
         if (entryId) {
           const existingIdx = patientCopy.history.findIndex((h) => h.id === entryId);
@@ -253,16 +255,22 @@ const useStore = create(
         const key = getStorageKey(get().currentUser);
         const savedRaw = localStorage.getItem(key);
         let savedOk = false;
+        console.log(`[saveAssessmentResults DEBUG] chave='${key}', savedRaw existe=${!!savedRaw}, tamanho=${savedRaw?.length || 0} bytes`);
         if (savedRaw) {
           try {
             const savedParsed = JSON.parse(savedRaw);
             const savedPat = savedParsed.find((p) => p.id === pid);
             if (savedPat && Array.isArray(savedPat.history) && savedPat.history.some((h) => h.id === evalId)) {
               savedOk = true;
+              console.log(`[saveAssessmentResults DEBUG] ✅ Encontrado no localStorage: ${moduleName} para ${pid}`);
+            } else {
+              console.log(`[saveAssessmentResults DEBUG] ❌ Não encontrado: savedPat=${!!savedPat}, history=${savedPat?.history?.length}, evalId buscado=${evalId}`);
             }
           } catch (parseErr) {
             console.error('[saveAssessmentResults] Erro ao verificar localStorage:', parseErr);
           }
+        } else {
+          console.log(`[saveAssessmentResults DEBUG] ❌ localStorage vazio para chave='${key}'`);
         }
         debugLog(`[saveAssessmentResults] ${moduleName} salvo para paciente ${pid} (entry: ${evalId}) - localStorage verificado: ${savedOk}`);
 
@@ -383,7 +391,9 @@ const useStore = create(
                     set({ authLoading: false });
                     return;
                   }
-                } catch (_) { /* ignore */ }
+                } catch (err) {
+                  console.error('[initAuth] Erro ao ler localStorage (não-logado):', err);
+                }
               }
               set({ patients: [], activePatientId: null });
             }
@@ -430,7 +440,6 @@ const useStore = create(
       partialize: (state) => ({
         isLightMode: state.isLightMode,
         isGuestMode: state.isGuestMode,
-        patients: state.patients,
       }),
     }
   )

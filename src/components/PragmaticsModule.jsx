@@ -6,7 +6,7 @@ import CounterButton from './shared/CounterButton';
 import ProgressBar from './shared/ProgressBar';
 import AssessmentSummary from './shared/AssessmentSummary';
 
-export default function PragmaticsModule({ patient, onBack, onSaveAssessment }) {
+export default function PragmaticsModule({ patient, onBack, onSaveAssessment, isSaving }) {
   const [verbal, setVerbal] = useState(0);
   const [vocal, setVocal] = useState(0);
   const [gestual, setGestual] = useState(0);
@@ -112,7 +112,7 @@ export default function PragmaticsModule({ patient, onBack, onSaveAssessment }) 
                 ]}
               />
             )}
-            <button className="btn btn-primary" onClick={handleSave} style={{ marginTop: '0.5rem', height: '44px' }}>
+            <button className="btn btn-primary" onClick={handleSave} disabled={isSaving} style={{ marginTop: '0.5rem', height: '44px' }}>
               Finalizar e Salvar Pragmática
             </button>
           </AssessmentSummary>

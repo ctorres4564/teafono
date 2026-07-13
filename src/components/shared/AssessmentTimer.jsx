@@ -6,6 +6,15 @@ export default function AssessmentTimer({ initialSeconds = 300, onTimeUp, onTick
   const [isRunning, setIsRunning] = useState(false);
   const timerRef = useRef(null);
 
+  // Refs mantêm a versão mais recente das props sem forçar o efeito abaixo a
+  // recriar o interval a cada render (o que reiniciaria a contagem de 1s).
+  const onTimeUpRef = useRef(onTimeUp);
+  const onTickRef = useRef(onTick);
+  const initialSecondsRef = useRef(initialSeconds);
+  useEffect(() => { onTimeUpRef.current = onTimeUp; }, [onTimeUp]);
+  useEffect(() => { onTickRef.current = onTick; }, [onTick]);
+  useEffect(() => { initialSecondsRef.current = initialSeconds; }, [initialSeconds]);
+
   useEffect(() => {
     if (isRunning) {
       timerRef.current = setInterval(() => {
@@ -14,10 +23,10 @@ export default function AssessmentTimer({ initialSeconds = 300, onTimeUp, onTick
             setIsRunning(false);
             clearInterval(timerRef.current);
             playBeep();
-            if (onTimeUp) onTimeUp();
-            return initialSeconds;
+            if (onTimeUpRef.current) onTimeUpRef.current();
+            return initialSecondsRef.current;
           }
-          if (onTick) onTick(prev - 1);
+          if (onTickRef.current) onTickRef.current(prev - 1);
           return prev - 1;
         });
       }, 1000);

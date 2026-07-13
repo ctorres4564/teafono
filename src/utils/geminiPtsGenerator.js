@@ -1,4 +1,6 @@
 // Gemini API utilities for TeaFono
+import { auth } from '../firebase';
+
 export class GeminiApiError extends Error {
   constructor(message, status, retryAfter) {
     super(message);
@@ -46,9 +48,17 @@ export async function generateOfflinePlan(patient, assessments) {
 
 export async function callGeminiApi(patient, assessments) {
   try {
+    if (!auth?.currentUser) {
+      throw new GeminiApiError('É necessário estar autenticado para usar o PTS com IA', 401);
+    }
+    const idToken = await auth.currentUser.getIdToken();
+
     const response = await fetch('/api/generate-pts', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${idToken}`,
+      },
       body: JSON.stringify({ patient, assessments })
     });
 

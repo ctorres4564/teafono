@@ -110,7 +110,7 @@ const initialForm = {
   },
 };
 
-export default function AnamneseModule({ patient, onBack, onSaveAssessment, initialData, entryId }) {
+export default function AnamneseModule({ patient, onBack, onSaveAssessment, initialData, entryId, _isSaving }) {
   const [form, setForm] = useState(() => {
     if (initialData) {
       return {
