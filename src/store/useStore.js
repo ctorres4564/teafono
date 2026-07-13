@@ -71,6 +71,17 @@ const useStore = create(
         const key = getStorageKey(currentUser);
         try {
           const data = JSON.stringify(updatedList);
+          console.log(`[DIAGNÓSTICO] 💾 PERSISTINDO LOCALLY:`, {
+            key,
+            patientCount: updatedList.length,
+            payloadSize: data.length,
+            userId: currentUser?.uid,
+            anamneseData: updatedList.map(p => ({
+              patientId: p.id,
+              historyCount: p.history?.length || 0,
+              hasAnamnese: !!p.history?.[0]?.results?.anamnese,
+            })),
+          });
           localStorage.setItem(key, data);
           debugLog(`[persistPatients] Dados salvos em localStorage (chave: ${key}) - ${updatedList.length} pacientes (${data.length} bytes)`);
           localStorage.setItem(key + '_backup', data);
