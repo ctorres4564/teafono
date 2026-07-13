@@ -111,6 +111,15 @@ const initialForm = {
 };
 
 export default function AnamneseModule({ patient, onBack, onSaveAssessment, initialData, entryId }) {
+  console.log(`[DIAGNÓSTICO] 🎯 ANAMNESEMODULE RENDERIZADO - ENTRADA`, {
+    timestamp: new Date().toISOString(),
+    patientId: patient?.id,
+    patientName: patient?.name,
+    entryId,
+    initialDataReceived: !!initialData,
+    initialDataKeys: initialData ? Object.keys(initialData) : null,
+  });
+
   const [form, setForm] = useState(() => {
     if (initialData) {
       const filledForm = {

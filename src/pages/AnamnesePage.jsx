@@ -7,6 +7,13 @@ export default function AnamnesePage() {
   const { patientId, entryId } = useParams();
   const navigate = useNavigate();
   const patient = useStore((s) => s.patients.find((p) => p.id === patientId));
+
+  console.log(`[DIAGNÓSTICO] 🎯 ANAMNESEPAGE RENDERIZADO - ENTRADA`, {
+    timestamp: new Date().toISOString(),
+    patientId,
+    entryId,
+    patientFound: !!patient,
+  });
   const [saveStatus, setSaveStatus] = useState(null);
 
   const handleSave = useCallback(async (moduleName, results, id) => {
