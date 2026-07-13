@@ -54,7 +54,10 @@ export default function App() {
 
   useEffect(() => {
     loadFromLocalStorage();
-    initAuth();
+    const unsubscribe = initAuth();
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -80,7 +83,7 @@ export default function App() {
           <Route path="/mchat/:patientId" element={<MchatPage />} />
           <Route path="/followup/:patientId" element={<FollowUpPage />} />
           <Route path="/pragmatics/:patientId" element={<PragmaticsPage />} />
-          <Route path="/anamnese/:patientId" element={<AnamnesePage />} />
+          <Route path="/anamnese/:patientId/:entryId?" element={<AnamnesePage />} />
           <Route path="/bambi/:patientId" element={<BambiPage />} />
           <Route path="/caa/:patientId" element={<CaaPage />} />
           <Route path="/report/:patientId/:reportId" element={<ReportPage />} />

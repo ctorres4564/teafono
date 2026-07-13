@@ -29,7 +29,6 @@ let app = null;
 let db = null;
 let auth = null;
 
-// Inicialização segura do Firebase (Modo Híbrido)
 const isConfigValid = firebaseConfig.projectId && firebaseConfig.apiKey;
 
 if (isConfigValid) {
@@ -38,22 +37,19 @@ if (isConfigValid) {
       app = initializeApp(firebaseConfig);
       db = getFirestore(app);
       auth = getAuth(app);
-      console.log("Google Firebase Auth e Firestore inicializados em nuvem.");
+      console.log("[Firebase] Firebase Auth e Firestore inicializados.");
     } else {
       app = getApps()[0];
       db = getFirestore(app);
       auth = getAuth(app);
     }
   } catch (err) {
-    console.error("Falha ao inicializar o Firebase. Rodando no modo local.", err);
+    console.error("[Firebase] Falha ao inicializar:", err);
   }
 } else {
-  console.log("Credenciais do Firebase ausentes no arquivo .env. Rodando no modo LocalStorage híbrido.");
+  console.log("[Firebase] Credenciais ausentes. Modo local.");
 }
 
-/**
- * Retorna se o Firebase está ativo no momento
- */
 export function isFirebaseEnabled() {
   return db !== null && auth !== null;
 }
@@ -61,63 +57,69 @@ export function isFirebaseEnabled() {
 export { auth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut, onAuthStateChanged };
 
 /**
- * Salva ou atualiza um paciente individual no Firestore sob o UID do usuário
+ * Remove campos undefined do objeto para evitar erros do Firestore.
  */
-const removeUndefinedFields = (value) => {
-  if (Array.isArray(value)) {
-    return value.map(removeUndefinedFields);
+function removeUndefined(obj) {
+  if (obj === null || obj === undefined || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(removeUndefined);
+  const cleaned = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) {
+      cleaned[key] = removeUndefined(value);
+    }
   }
-
-  if (value && typeof value === 'object') {
-    return Object.fromEntries(
-      Object.entries(value)
-        .filter(([, fieldValue]) => fieldValue !== undefined)
-        .map(([key, fieldValue]) => [key, removeUndefinedFields(fieldValue)])
-    );
-  }
-
-  return value;
-};
+  return cleaned;
+}
 
 export async function savePatientToFirestore(patient, userId) {
-  if (!db || !userId || !patient?.id) return;
+  if (!db || !userId) {
+    console.warn('[Firestore] savePatientToFirestore: db ou userId ausente', { db: !!db, userId });
+    return { success: false, error: 'Firestore não disponível' };
+  }
+  if (!patient?.id) {
+    console.warn('[Firestore] savePatientToFirestore: patient.id ausente');
+    return { success: false, error: 'patient.id ausente' };
+  }
   try {
     const patientRef = doc(db, 'users', userId, 'patients', patient.id);
-    await setDoc(patientRef, removeUndefinedFields(patient), { merge: true });
-    console.log(`Paciente ${patient.name} (${patient.id}) sincronizado na nuvem para o usuário ${userId}.`);
+    const cleaned = removeUndefined(patient);
+    await setDoc(patientRef, cleaned, { merge: true });
+    console.log(`[Firestore] Paciente ${patient.name} (${patient.id}) sincronizado.`);
+    return { success: true };
   } catch (err) {
-    console.error("Erro ao sincronizar paciente no Firestore:", err);
+    console.error("[Firestore] Erro ao sincronizar paciente:", err.code, err.message);
+    return { success: false, error: err.message, code: err.code };
   }
 }
 
-/**
- * Remove um paciente do Firestore pelo ID sob o UID do usuário
- */
 export async function deletePatientFromFirestore(patientId, userId) {
-  if (!db || !userId) return;
+  if (!db || !userId) return { success: false, error: 'Firestore não disponível' };
   try {
     await deleteDoc(doc(db, 'users', userId, 'patients', patientId));
-    console.log(`Paciente ${patientId} removido da nuvem para o usuário ${userId}.`);
+    console.log(`[Firestore] Paciente ${patientId} removido.`);
+    return { success: true };
   } catch (err) {
-    console.error("Erro ao deletar paciente do Firestore:", err);
+    console.error("[Firestore] Erro ao deletar paciente:", err);
+    return { success: false, error: err.message };
   }
 }
 
-/**
- * Carrega a lista completa de pacientes do Firestore sob o UID do usuário
- */
 export async function loadPatientsFromFirestore(userId) {
-  if (!db || !userId) return [];
+  if (!db || !userId) {
+    console.warn('[Firestore] loadPatientsFromFirestore: db ou userId ausente');
+    return [];
+  }
   try {
     const querySnapshot = await getDocs(collection(db, 'users', userId, 'patients'));
     const list = [];
     querySnapshot.forEach((doc) => {
       list.push(doc.data());
     });
-    // Ordena pela data de criação decrescente
-    return list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    const sorted = list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    console.log(`[Firestore] ${sorted.length} pacientes carregados para usuário ${userId}.`);
+    return sorted;
   } catch (err) {
-    console.error("Erro ao carregar pacientes do Firestore. Fallback local.", err);
-    return [];
+    console.error("[Firestore] Erro ao carregar pacientes:", err.code, err.message);
+    throw err; // Propagar para que initAuth possa tratar
   }
 }

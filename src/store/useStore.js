@@ -11,10 +11,11 @@ import {
   onAuthStateChanged,
 } from '../firebase';
 
-const normalizePatient = (patient) => ({
-  ...patient,
-  history: Array.isArray(patient.history) ? patient.history : [],
-});
+const LOCAL_STORAGE_KEY = 'teafono_patients';
+
+function getStorageKey(user) {
+  return user?.uid ? `${LOCAL_STORAGE_KEY}_${user.uid}` : LOCAL_STORAGE_KEY;
+}
 
 const useStore = create(
   persist(
@@ -39,10 +40,6 @@ const useStore = create(
       },
 
       loadFromLocalStorage: () => {
-        const storedGuestMode = localStorage.getItem('teafono_guest_mode');
-        if (storedGuestMode === 'true') {
-          set({ isGuestMode: true });
-        }
         const storedSettings = localStorage.getItem('teafono_therapist_settings');
         if (storedSettings) {
           set({ therapistSettings: JSON.parse(storedSettings) });
@@ -67,21 +64,21 @@ const useStore = create(
       },
 
       persistPatients: (updatedList) => {
-        const sanitizedList = updatedList.map(normalizePatient);
-        set({ patients: sanitizedList });
+        set({ patients: updatedList });
         const { currentUser } = get();
-        if (currentUser) {
-          localStorage.setItem(
-            `teafono_patients_${currentUser.uid}`,
-            JSON.stringify(sanitizedList)
-          );
-          if (isFirebaseEnabled()) {
-            sanitizedList.forEach((patient) => {
-              savePatientToFirestore(patient, currentUser.uid);
-            });
-          }
-        } else {
-          localStorage.setItem('teafono_patients', JSON.stringify(sanitizedList));
+        const key = getStorageKey(currentUser);
+        try {
+          const data = JSON.stringify(updatedList);
+          localStorage.setItem(key, data);
+          console.log(`[persistPatients] Dados salvos em localStorage (chave: ${key}) - ${updatedList.length} pacientes (${data.length} bytes)`);
+          localStorage.setItem(key + '_backup', data);
+        } catch (e) {
+          console.error('[persistPatients] Erro ao salvar no localStorage:', e);
+        }
+        if (currentUser && isFirebaseEnabled()) {
+          updatedList.forEach((patient) => {
+            savePatientToFirestore(patient, currentUser.uid);
+          });
         }
       },
 
@@ -97,12 +94,12 @@ const useStore = create(
       addPatient: (newPatData) => {
         const newPat = {
           id: 'tp_' + Date.now(),
-          name: newPatData.name?.trim(),
+          name: newPatData.name,
           age: newPatData.age,
           gender: newPatData.gender,
-          diagnosis: newPatData.diagnosis?.trim() || '',
+          diagnosis: newPatData.diagnosis || '',
           birthDate: newPatData.birthDate || '',
-          speechComplaint: newPatData.speechComplaint?.trim() || '',
+          speechComplaint: newPatData.speechComplaint || '',
           createdAt: new Date().toISOString(),
           history: [],
           isSelected: true,
@@ -130,12 +127,12 @@ const useStore = create(
           if (p.id === updatedPatData.id) {
             return {
               ...p,
-              ...updatedPatData,
-              name: updatedPatData.name?.trim(),
-              age: updatedPatData.age,
-              diagnosis: updatedPatData.diagnosis?.trim() || '',
-              birthDate: updatedPatData.birthDate || '',
-              speechComplaint: updatedPatData.speechComplaint?.trim() || '',
+              name: updatedPatData.name ?? p.name,
+              age: updatedPatData.age ?? p.age,
+              gender: updatedPatData.gender ?? p.gender,
+              diagnosis: updatedPatData.diagnosis ?? p.diagnosis,
+              birthDate: updatedPatData.birthDate ?? p.birthDate,
+              speechComplaint: updatedPatData.speechComplaint ?? p.speechComplaint,
             };
           }
           return p;
@@ -152,30 +149,84 @@ const useStore = create(
         ) return;
         const resetList = importedList.map((p, idx) => ({
           ...p,
+          history: Array.isArray(p.history) ? p.history : [],
           isSelected: idx === 0,
         }));
         set({ activePatientId: resetList.length > 0 ? resetList[0].id : null });
         get().persistPatients(resetList);
       },
 
-      saveAssessmentResults: (moduleName, results) => {
-        const { patients, activePatient } = get();
-        if (!activePatient) return;
-        const patientIdx = patients.findIndex((p) => p.id === activePatient.id);
-        if (patientIdx === -1) return;
+      saveAssessmentResults: (moduleName, results, entryId, patientId) => {
+        const { patients, activePatientId } = get();
+        const pid = patientId || activePatientId;
+        console.log(`[saveAssessmentResults] iniciando: moduleName=${moduleName}, pid=${pid}, entryId=${entryId}, patients.length=${patients.length}`);
+        if (!pid) { console.error('[saveAssessmentResults] Nenhum patientId disponível'); return; }
+        const patientIdx = patients.findIndex((p) => p.id === pid);
+        if (patientIdx === -1) { console.error('[saveAssessmentResults] Paciente não encontrado:', pid); return; }
 
-        const patientCopy = { ...patients[patientIdx] };
-        const evalId = 'teval_' + Date.now();
-        const newHistoryEntry = {
-          id: evalId,
-          date: new Date().toISOString(),
-          results: { [moduleName]: results },
-        };
-        patientCopy.history = [newHistoryEntry, ...(patientCopy.history || [])];
+        let patientCopy;
+        try {
+          patientCopy = JSON.parse(JSON.stringify(patients[patientIdx]));
+        } catch (e) {
+          console.error('[saveAssessmentResults] Erro ao clonar paciente:', e);
+          patientCopy = { ...patients[patientIdx], history: [...(patients[patientIdx].history || [])] };
+        }
+        if (!Array.isArray(patientCopy.history)) {
+          patientCopy.history = [];
+        }
+
+        let resultsCopy;
+        try {
+          resultsCopy = JSON.parse(JSON.stringify(results));
+        } catch (e) {
+          console.error('[saveAssessmentResults] Erro ao clonar results:', e);
+          resultsCopy = { ...results };
+        }
+
+        if (entryId) {
+          const existingIdx = patientCopy.history.findIndex((h) => h.id === entryId);
+          if (existingIdx !== -1) {
+            patientCopy.history[existingIdx] = {
+              ...patientCopy.history[existingIdx],
+              date: new Date().toISOString(),
+              results: { ...patientCopy.history[existingIdx].results, [moduleName]: resultsCopy },
+            };
+          } else {
+            patientCopy.history.unshift({
+              id: entryId,
+              date: new Date().toISOString(),
+              results: { [moduleName]: resultsCopy },
+            });
+          }
+        } else {
+          patientCopy.history.unshift({
+            id: 'teval_' + Date.now(),
+            date: new Date().toISOString(),
+            results: { [moduleName]: resultsCopy },
+          });
+        }
+
         const updatedPatients = [...patients];
         updatedPatients[patientIdx] = patientCopy;
-        set({ patients: updatedPatients, activeReportId: evalId });
+        const evalId = patientCopy.history[0].id;
+
+        set({ patients: updatedPatients, activePatientId: pid, activeReportId: evalId });
+
         get().persistPatients(updatedPatients);
+
+        const key = getStorageKey(get().currentUser);
+        const savedRaw = localStorage.getItem(key);
+        let savedOk = false;
+        if (savedRaw) {
+          try {
+            const savedParsed = JSON.parse(savedRaw);
+            const savedPat = savedParsed.find((p) => p.id === pid);
+            if (savedPat && Array.isArray(savedPat.history) && savedPat.history.some((h) => h.id === evalId)) {
+              savedOk = true;
+            }
+          } catch (_) {}
+        }
+        console.log(`[saveAssessmentResults] ${moduleName} salvo para paciente ${pid} (entry: ${evalId}) - localStorage verificado: ${savedOk}`);
       },
 
       viewReport: (reportId) => {
@@ -195,7 +246,6 @@ const useStore = create(
             console.error('Erro ao deslogar:', err);
           }
         }
-        localStorage.setItem('teafono_guest_mode', JSON.stringify(false));
         set({
           isGuestMode: false,
           currentUser: null,
@@ -206,6 +256,7 @@ const useStore = create(
 
       initAuth: () => {
         if (!isFirebaseEnabled()) {
+          console.log('[initAuth] Firebase desabilitado. Mantendo dados locais.');
           set({ authLoading: false });
           return;
         }
@@ -213,49 +264,138 @@ const useStore = create(
           set({ authLoading: true });
           if (user) {
             set({ currentUser: user, isGuestMode: false });
-            const firestoreList = await loadPatientsFromFirestore(user.uid);
+            console.log('[initAuth] Usuário autenticado:', user.uid);
+
+            let firestoreList = [];
+            let firestoreError = false;
+            try {
+              firestoreList = await loadPatientsFromFirestore(user.uid);
+            } catch (err) {
+              console.error('[initAuth] Erro ao carregar do Firestore:', err);
+              firestoreError = true;
+            }
+
+            const userKey = getStorageKey(user);
+            let userLocalRaw = localStorage.getItem(userKey);
+            if (!userLocalRaw) {
+              userLocalRaw = localStorage.getItem(userKey + '_backup');
+              if (userLocalRaw) console.log('[initAuth] Usando backup do localStorage (logado)');
+            }
+            let guestLocalRaw = localStorage.getItem(LOCAL_STORAGE_KEY);
+            if (!guestLocalRaw) {
+              guestLocalRaw = localStorage.getItem(LOCAL_STORAGE_KEY + '_backup');
+            }
+
             if (firestoreList && firestoreList.length > 0) {
-              const normalizedList = firestoreList.map(normalizePatient);
-              set({ patients: normalizedList });
-              localStorage.setItem(`teafono_patients_${user.uid}`, JSON.stringify(normalizedList));
-              const selected = normalizedList.find((p) => p.isSelected) || normalizedList[0];
-              if (selected) set({ activePatientId: selected.id });
-            } else {
-              const userStored = localStorage.getItem(`teafono_patients_${user.uid}`);
-              if (userStored) {
-                const normalizedList = JSON.parse(userStored).map(normalizePatient);
-                set({ patients: normalizedList });
-                const selected = normalizedList.find((p) => p.isSelected) || normalizedList[0];
-                if (selected) set({ activePatientId: selected.id });
-              } else {
-                const localStored = localStorage.getItem('teafono_patients');
-                if (localStored) {
-                  const parsed = JSON.parse(localStored);
-                  if (
-                    parsed.length > 0 &&
-                    window.confirm(
-                      'Detectamos fichas de pacientes criadas localmente neste navegador. Deseja sincronizá-las e salvá-las na sua conta em nuvem?'
-                    )
-                  ) {
-                    const normalizedList = parsed.map(normalizePatient);
-                    set({ patients: normalizedList });
-                    localStorage.setItem(`teafono_patients_${user.uid}`, JSON.stringify(normalizedList));
-                    normalizedList.forEach((pat) => {
-                      savePatientToFirestore(pat, user.uid);
+              let merged = [...firestoreList];
+              if (userLocalRaw) {
+                try {
+                  const localParsed = JSON.parse(userLocalRaw);
+                  if (Array.isArray(localParsed) && localParsed.length > 0) {
+                    merged = firestoreList.map((fPat) => {
+                      const localPat = localParsed.find((l) => l.id === fPat.id);
+                      if (localPat) {
+                        const fTime = new Date(fPat.createdAt || 0).getTime();
+                        const lTime = new Date(localPat.createdAt || 0).getTime();
+                        if (lTime >= fTime && localPat.history?.length >= (fPat.history?.length || 0)) {
+                          return JSON.parse(JSON.stringify(localPat));
+                        }
+                      }
+                      return fPat;
                     });
-                    localStorage.removeItem('teafono_patients');
-                  } else {
-                    set({ patients: [], activePatientId: null });
+                    const localsToSync = [];
+                    localParsed.forEach((lPat) => {
+                      if (!merged.find((m) => m.id === lPat.id)) {
+                        merged.push(JSON.parse(JSON.stringify(lPat)));
+                        localsToSync.push(lPat);
+                      }
+                    });
+                    if (localsToSync.length > 0) {
+                      console.log(`[initAuth] Sincronizando ${localsToSync.length} paciente(s) locais com o Firestore`);
+                      localsToSync.forEach((pat) => {
+                        savePatientToFirestore(pat, user.uid);
+                      });
+                    }
                   }
-                } else {
-                  set({ patients: [], activePatientId: null });
+                } catch (e) { console.error('[initAuth] Erro ao fazer merge:', e); }
+              }
+              set({ patients: merged });
+              localStorage.setItem(userKey, JSON.stringify(merged));
+              console.log(`[initAuth] ${merged.length} pacientes carregados (Firestore + merge local)`);
+              const selected = merged.find((p) => p.isSelected);
+              if (selected) set({ activePatientId: selected.id });
+            } else if (firestoreError) {
+              const fallbackRaw = userLocalRaw || guestLocalRaw;
+              if (fallbackRaw) {
+                try {
+                  const parsed = JSON.parse(fallbackRaw);
+                  if (Array.isArray(parsed)) {
+                    set({ patients: parsed });
+                    localStorage.setItem(userKey, JSON.stringify(parsed));
+                    const selected = parsed.find((p) => p.isSelected);
+                    if (selected) set({ activePatientId: selected.id });
+                    console.log(`[initAuth] Fallback para dados locais: ${parsed.length} pacientes`);
+                  }
+                } catch (e) {
+                  console.error('[initAuth] Erro ao ler fallback local:', e);
+                  set({ patients: [] });
                 }
+              } else {
+                set({ patients: [] });
+              }
+            } else {
+              const localSource = userLocalRaw || guestLocalRaw || null;
+              if (localSource) {
+                try {
+                  const parsed = JSON.parse(localSource);
+                  if (Array.isArray(parsed) && parsed.length > 0) {
+                    set({ patients: parsed });
+                    localStorage.setItem(userKey, JSON.stringify(parsed));
+                    const isGuestSource = !userLocalRaw && !!guestLocalRaw;
+                    parsed.forEach(async (pat) => {
+                      await savePatientToFirestore(pat, user.uid);
+                    });
+                    if (isGuestSource) {
+                      console.log(`[initAuth] Dados migrados do modo convidado para nuvem: ${parsed.length} pacientes`);
+                    } else {
+                      console.log(`[initAuth] Dados locais sincronizados para nuvem: ${parsed.length} pacientes`);
+                    }
+                    const selected = parsed.find((p) => p.isSelected);
+                    if (selected) set({ activePatientId: selected.id });
+                  } else {
+                    set({ patients: [] });
+                  }
+                } catch (e) {
+                  console.error('[initAuth] Erro ao processar dados locais:', e);
+                  set({ patients: [] });
+                }
+              } else {
+                console.log('[initAuth] Nenhum dado encontrado. Iniciando vazio.');
+                set({ patients: [] });
               }
             }
           } else {
             set({ currentUser: null });
             const { isGuestMode } = get();
             if (!isGuestMode) {
+              let localData = localStorage.getItem(LOCAL_STORAGE_KEY);
+              if (!localData) {
+                localData = localStorage.getItem(LOCAL_STORAGE_KEY + '_backup');
+                if (localData) console.log('[initAuth] Usando backup do localStorage (não-logado)');
+              }
+              if (localData) {
+                try {
+                  const parsed = JSON.parse(localData);
+                  if (Array.isArray(parsed) && parsed.length > 0) {
+                    set({ patients: parsed });
+                    const selected = parsed.find((p) => p.isSelected);
+                    if (selected) set({ activePatientId: selected.id });
+                    console.log(`[initAuth] Modo não-logado: ${parsed.length} pacientes do localStorage`);
+                    set({ authLoading: false });
+                    return;
+                  }
+                } catch (_) { /* ignore */ }
+              }
               set({ patients: [], activePatientId: null });
             }
           }
@@ -265,22 +405,31 @@ const useStore = create(
       },
 
       initGuestMode: () => {
-        const stored = localStorage.getItem('teafono_patients');
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          const normalizedList = parsed.map(normalizePatient);
-          set({ patients: normalizedList });
-          const selected = normalizedList.find((p) => p.isSelected) || normalizedList[0];
-          if (selected) set({ activePatientId: selected.id });
-        } else {
-          localStorage.setItem('teafono_patients', JSON.stringify(mockTeaPatients));
-          set({ patients: mockTeaPatients, activePatientId: mockTeaPatients[0].id });
+        const key = getStorageKey(null);
+        let stored = localStorage.getItem(key);
+        if (!stored) {
+          stored = localStorage.getItem(key + '_backup');
+          if (stored) console.log('[initGuestMode] Usando backup do localStorage');
         }
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed)) {
+              set({ patients: parsed });
+              const selected = parsed.find((p) => p.isSelected);
+              if (selected) set({ activePatientId: selected.id });
+              console.log(`[initGuestMode] Carregados ${parsed.length} pacientes de localStorage`);
+              return;
+            }
+          } catch (e) { console.error('[initGuestMode] Erro ao ler dados:', e); }
+        }
+        localStorage.setItem(key, JSON.stringify(mockTeaPatients));
+        set({ patients: mockTeaPatients, activePatientId: mockTeaPatients[0].id });
+        console.log('[initGuestMode] Dados mock carregados');
       },
 
       setGuestMode: (val) => {
         set({ isGuestMode: val });
-        localStorage.setItem('teafono_guest_mode', JSON.stringify(val));
       },
 
       setActiveReportId: (val) => {
@@ -293,7 +442,6 @@ const useStore = create(
         isLightMode: state.isLightMode,
         isGuestMode: state.isGuestMode,
         patients: state.patients,
-        activePatientId: state.activePatientId,
       }),
     }
   )

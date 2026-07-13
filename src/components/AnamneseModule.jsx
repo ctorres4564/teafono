@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import AssessmentHeader from './shared/AssessmentHeader';
 
@@ -110,9 +110,37 @@ const initialForm = {
   },
 };
 
-export default function AnamneseModule({ patient, onBack, onSaveAssessment }) {
-  const [form, setForm] = useState(initialForm);
-  const [openSections, setOpenSections] = useState({});
+export default function AnamneseModule({ patient, onBack, onSaveAssessment, initialData, entryId }) {
+  const [form, setForm] = useState(() => {
+    if (initialData) {
+      return {
+        ...initialForm,
+        ...initialData,
+        identification: { ...initialForm.identification, ...initialData.identification },
+        mainComplaint: { ...initialForm.mainComplaint, ...initialData.mainComplaint },
+        swallowing: { ...initialForm.swallowing, ...initialData.swallowing },
+        auditory: { ...initialForm.auditory, ...initialData.auditory },
+        medical: { ...initialForm.medical, ...initialData.medical },
+        global: { ...initialForm.global, ...initialData.global },
+        observation: { ...initialForm.observation, ...initialData.observation },
+        instruments: { ...initialForm.instruments, ...initialData.instruments },
+        diagnosis: {
+          ...initialForm.diagnosis,
+          ...initialData.diagnosis,
+          affectedAreas: { ...initialForm.diagnosis.affectedAreas, ...initialData.diagnosis?.affectedAreas },
+        },
+      };
+    }
+    return {
+      ...initialForm,
+      identification: { ...initialForm.identification, name: patient.name || '' },
+    };
+  });
+  const formRef = useRef(form);
+  formRef.current = form;
+
+  const [openSections, setOpenSections] = useState({ identification: true });
+  const [saving, setSaving] = useState(false);
 
   const toggleSection = (id) => {
     setOpenSections(prev => ({ ...prev, [id]: !prev[id] }));
@@ -136,10 +164,11 @@ export default function AnamneseModule({ patient, onBack, onSaveAssessment }) {
   };
 
   const handleSave = () => {
-    onSaveAssessment('anamnese', form);
+    const latestForm = formRef.current;
+    if (!latestForm.identification.name && !window.confirm('Nome da criança não preenchido. Deseja salvar mesmo assim?')) return;
+    setSaving(true);
+    onSaveAssessment('anamnese', latestForm, entryId);
   };
-
-  const allIdentificationFilled = form.identification.name && form.identification.birthDate;
 
   const renderField = (label, value, onChange, type = 'text', placeholder = '', opts = null) => (
     <div className="form-group">
@@ -209,7 +238,7 @@ export default function AnamneseModule({ patient, onBack, onSaveAssessment }) {
                 }, 'date')}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                {renderField('Idade (anos)', s.age, v => updateField('identification', 'age', v), 'number', '', [], true)}
+                {renderField('Idade (anos)', s.age, v => updateField('identification', 'age', v), 'number', 'Ex: 4')}
                 {renderField('Sexo', s.sex, v => updateField('identification', 'sex', v), 'text', '', ['Masculino', 'Feminino', 'Outro'])}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -687,9 +716,9 @@ export default function AnamneseModule({ patient, onBack, onSaveAssessment }) {
           className="btn btn-primary"
           onClick={handleSave}
           style={{ alignSelf: 'flex-end', width: '220px', height: '48px' }}
-          disabled={!allIdentificationFilled}
+          disabled={saving}
         >
-          Finalizar e Salvar Anamnese
+          {saving ? 'Salvando...' : 'Finalizar e Salvar Anamnese'}
         </button>
       </div>
     </div>
