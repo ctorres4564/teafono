@@ -77,7 +77,7 @@ function PragmaticsChart({ history }) {
   );
 }
 
-export default function Dashboard({ patients, onSelectPatient, onAddPatient, onDeletePatient, onUpdatePatient, onImportBackup, onStartAssessment, onViewReport, onGoToCaa, onEditAssessment }) {
+export default function Dashboard({ patients, onSelectPatient, onAddPatient, onDeletePatient, onUpdatePatient, onImportBackup, onStartAssessment, onViewReport, onGoToCaa }) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newName, setNewName] = useState('');
   const [newAge, setNewAge] = useState('');
@@ -360,9 +360,6 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
                   <div>
                     <h5 style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>Avaliações Fonoaudiológicas</h5>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                      <button className="btn btn-primary" onClick={() => onStartAssessment('anamnese')} style={{ justifyContent: 'flex-start', background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' }}>
-                        Anamnese Fonoaudiológica
-                      </button>
                       <button className="btn btn-primary" onClick={() => onStartAssessment('mchat')} style={{ justifyContent: 'flex-start', background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' }}>
                         Triagem de Sinais Precoces (M-CHAT-R/F)
                       </button>
@@ -407,9 +404,6 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
                               <Calendar size={12} /> {new Date(hist.date).toLocaleDateString('pt-BR')}
                             </span>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.25rem' }}>
-                              {hist.results.anamnese && (
-                                <span onClick={() => onEditAssessment?.('anamnese', hist.id)} className="badge badge-info" style={{ fontSize: '0.65rem', background: '#6366f1', color: '#fff', cursor: 'pointer' }} title="Clique para editar">Anamnese ✎</span>
-                              )}
                               {hist.results.mchat && (
                                 <span className="badge badge-danger" style={{ fontSize: '0.65rem' }}>M-CHAT: {hist.results.mchat.risk}</span>
                               )}

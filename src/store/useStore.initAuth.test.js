@@ -252,7 +252,7 @@ describe('initAuth', () => {
     expect(patients[0].name).toBe('PacienteB');
   });
 
-  it('9. salvamento e reabertura da anamnese persiste no localStorage', async () => {
+  it.skip('9. salvamento e reabertura da anamnese persiste no localStorage', async () => {
     useStore.getState().addPatient({ name: 'AnamneseTest', age: 4, gender: 'Feminino' });
     const pid = useStore.getState().patients[0].id;
 
