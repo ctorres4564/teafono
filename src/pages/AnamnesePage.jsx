@@ -44,6 +44,20 @@ export default function AnamnesePage() {
     if (historyEntry?.results?.anamnese) {
       initialData = historyEntry.results.anamnese;
     }
+    console.log(`[DIAGNÓSTICO] 📋 ANAMNESEPAGE - CARREGANDO DADOS:`, {
+      patientId,
+      entryId,
+      patientFound: !!patient,
+      patientName: patient?.name,
+      patientHistoryLength: patient?.history?.length,
+      historyEntryFound: !!historyEntry,
+      historyEntryId: historyEntry?.id,
+      historyEntryDate: historyEntry?.date,
+      historyEntryResults: historyEntry?.results,
+      anamneseFound: !!historyEntry?.results?.anamnese,
+      initialDataKeys: initialData ? Object.keys(initialData) : null,
+      initialData,
+    });
   }
 
   return (

@@ -125,6 +125,20 @@ export async function loadPatientsFromFirestore(userId) {
       list.push(doc.data());
     });
     const sorted = list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    console.log(`[DIAGNÓSTICO] 📖 LIDO DO FIRESTORE:`, {
+      userId,
+      patientCount: sorted.length,
+      patients: sorted.map(p => ({
+        patientId: p.id,
+        patientName: p.name,
+        historyLength: p.history?.length || 0,
+        lastHistoryEntry: sorted[0]?.history?.[0] || null,
+        lastHistoryId: sorted[0]?.history?.[0]?.id,
+        lastHistoryResults: sorted[0]?.history?.[0]?.results || 'VAZIO',
+        lastHistoryAnamnese: sorted[0]?.history?.[0]?.results?.anamnese || 'VAZIO',
+        lastHistoryAnamneseKeys: Object.keys(sorted[0]?.history?.[0]?.results?.anamnese || {}),
+      })),
+    });
     debugLog(`[Firestore] ${sorted.length} pacientes carregados para usuário ${userId}.`);
     return sorted;
   } catch (err) {
