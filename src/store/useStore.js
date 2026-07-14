@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { mockTeaPatients } from '../utils/teaEvaluations';
 import { mergePatients } from './mergePatients';
+import { generatePatientId, generateAssessmentId } from '../utils/idGenerator';
 import {
   isFirebaseEnabled,
   savePatientToFirestore,
@@ -44,7 +45,12 @@ const useStore = create(
       loadFromLocalStorage: () => {
         const storedSettings = localStorage.getItem('teafono_therapist_settings');
         if (storedSettings) {
-          set({ therapistSettings: JSON.parse(storedSettings) });
+          try {
+            set({ therapistSettings: JSON.parse(storedSettings) });
+          } catch (e) {
+            console.error('[loadFromLocalStorage] Erro ao parsear therapist settings:', e);
+            set({ therapistSettings: null });
+          }
         }
         const storedTheme = localStorage.getItem('teafono_theme');
         if (storedTheme === 'light') {
@@ -129,7 +135,7 @@ const useStore = create(
 
       addPatient: (newPatData) => {
         const newPat = {
-          id: 'tp_' + Date.now(),
+          id: generatePatientId(),
           name: newPatData.name,
           age: newPatData.age,
           gender: newPatData.gender,
@@ -236,7 +242,7 @@ const useStore = create(
           }
         } else {
           patientCopy.history.unshift({
-            id: 'teval_' + Date.now(),
+            id: generateAssessmentId(),
             date: new Date().toISOString(),
             results: { [moduleName]: resultsCopy },
           });

@@ -1,6 +1,77 @@
+// Rate limiting: store requests per user (userId -> { count, resetTime })
+const requestLimits = new Map();
+
+function isRateLimited(userId) {
+  const now = Date.now();
+  const record = requestLimits.get(userId) || { count: 0, resetTime: now + 60000 };
+
+  // Reset if window has passed
+  if (now > record.resetTime) {
+    record.count = 1;
+    record.resetTime = now + 60000; // 60 second window
+  } else {
+    record.count++;
+  }
+
+  requestLimits.set(userId, record);
+
+  // Max 5 requests per minute per user
+  return record.count > 5;
+}
+
+// Firebase Admin SDK initialization (requires FIREBASE_PROJECT_ID env var)
+let adminAuth;
+try {
+  // Use the Firebase Admin SDK from vercel serverless context if available
+  const admin = require('firebase-admin');
+  if (!admin.apps.length) {
+    admin.initializeApp({
+      projectId: process.env.FIREBASE_PROJECT_ID,
+    });
+  }
+  adminAuth = admin.auth();
+} catch (e) {
+  console.error('[generate-pts] Firebase Admin initialization failed:', e.message);
+  // Will handle gracefully in handler
+}
+
+async function verifyFirebaseToken(token) {
+  if (!adminAuth) {
+    return null;
+  }
+  try {
+    return await adminAuth.verifyIdToken(token);
+  } catch (error) {
+    return null;
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // NEW: Validate Firebase token for authentication
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Unauthorized: missing token' });
+  }
+
+  const token = authHeader.substring(7); // Remove "Bearer " prefix
+  const decodedToken = await verifyFirebaseToken(token);
+
+  if (!decodedToken) {
+    return res.status(401).json({ error: 'Unauthorized: invalid token' });
+  }
+
+  const userId = decodedToken.uid;
+
+  // NEW: Check rate limit for this user
+  if (isRateLimited(userId)) {
+    return res.status(429).json({
+      error: 'Rate limit exceeded: maximum 5 requests per minute',
+      retryAfter: 60
+    });
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
@@ -14,12 +85,25 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing patient or assessments' });
     }
 
+    // NEW: Anonymize patient data before sending to external API (LGPD/GDPR compliance)
+    // Hash patient identifier - cannot be reversed to identify the child
+    function hashUID(uid) {
+      let hash = 0;
+      for (let i = 0; i < uid.length; i++) {
+        const char = uid.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+      }
+      return 'pat_' + Math.abs(hash).toString(16).padStart(16, '0');
+    }
+
+    const patientHash = hashUID(patient.id);
+
     const prompt = `Você é uma fonoaudióloga especialista em TEA com vasta experiência clínica em plano de intervenção fonoaudiológica personalizado para autismo. Crie um plano de intervenção personalizado e detalhado baseado nos dados abaixo:
 
-**Dados do Paciente:**
-- Nome: ${patient.name}
+**Dados Clínicos (Anônimos - LGPD Compliant):**
+- Paciente ID (hash): ${patientHash}
 - Idade: ${patient.age} anos
-- Data de Nascimento: ${patient.birthDate}
 - Gênero: ${patient.gender}
 - Queixa Fonoaudiológica: ${patient.speechComplaint}
 
@@ -64,8 +148,16 @@ Formate a saída como JSON com os seguintes campos: "planoDeIntervencao" (texto)
 
     const jsonMatch = text.match(/\{[^]*\}/g);
     if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-      return res.status(200).json(parsed);
+      try {
+        const parsed = JSON.parse(jsonMatch[0]);
+        return res.status(200).json(parsed);
+      } catch (parseError) {
+        console.error('[generate-pts] Erro ao fazer parse da resposta IA:', parseError);
+        return res.status(500).json({
+          error: 'Resposta da IA contém JSON inválido',
+          details: parseError.message
+        });
+      }
     }
 
     return res.status(500).json({ error: 'Formato de resposta inesperado' });
