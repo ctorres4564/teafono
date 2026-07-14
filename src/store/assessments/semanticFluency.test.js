@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   calculateSemanticFluencySummary,
+  createSemanticFluencyAction,
+  createSemanticFluencyCriterion,
   createSemanticFluencyDraft,
   finalizeSemanticFluencyDraft,
   getSemanticFluencyDisplaySummary,
@@ -70,11 +72,19 @@ describe('rascunho de fluência semântica', () => {
     saveSemanticFluencyDraft(storage, key, {
       ...draft,
       context: { ...draft.context, category: 'Categoria definida pela profissional' },
+      professionalReview: {
+        professionalName: 'Dra. Ana Silva',
+        professionalRegistration: 'CRFa 4-12345',
+        responsibilityAccepted: true,
+        reviewedAt: '2026-07-14T10:00:00.000Z',
+      },
     });
 
     const resumed = loadSemanticFluencyDraft(storage, key, 'patient-1');
     expect(resumed.id).toBe(draft.id);
     expect(resumed.context.category).toBe('Categoria definida pela profissional');
+    expect(resumed.professionalReview.responsibilityAccepted).toBe(false);
+    expect(resumed.professionalReview.reviewedAt).toBeNull();
     expect(loadSemanticFluencyDraft(storage, key, 'patient-2')).toBeNull();
   });
 
@@ -89,6 +99,41 @@ describe('rascunho de fluência semântica', () => {
     expect(errors).toContain('Documente a decisão manual da produção 1.');
   });
 
+  it('valida critérios e ações somente quando incluídos pela profissional', () => {
+    const criterion = createSemanticFluencyCriterion();
+    const action = createSemanticFluencyAction();
+    const draft = createSemanticFluencyDraft({ patientId: 'patient-1' });
+    const errors = validateSemanticFluencyDraft({
+      ...draft,
+      context: { ...draft.context, category: 'Categoria A', instruction: 'Instrução registrada' },
+      clinicalCriteria: [criterion],
+      plannedActions: [action],
+      professionalReview: {
+        professionalName: 'Dra. Ana Silva',
+        professionalRegistration: 'CRFa 4-12345',
+        responsibilityAccepted: true,
+      },
+    });
+
+    expect(errors).toContain('Descreva o critério clínico 1.');
+    expect(errors).toContain('Registre a evidência considerada no critério clínico 1.');
+    expect(errors).toContain('Informe o objetivo da ação profissional 1.');
+    expect(errors).toContain('Descreva a ação profissional 1.');
+    expect(errors).toContain('Registre a justificativa da ação profissional 1.');
+  });
+
+  it('exige autoria e revisão profissional para finalizar', () => {
+    const draft = createSemanticFluencyDraft({ patientId: 'patient-1' });
+    const errors = validateSemanticFluencyDraft({
+      ...draft,
+      context: { ...draft.context, category: 'Categoria A', instruction: 'Instrução registrada' },
+    });
+
+    expect(errors).toContain('Informe o nome da profissional responsável.');
+    expect(errors).toContain('Informe o registro profissional.');
+    expect(errors).toContain('Confirme a revisão e a responsabilidade profissional antes de finalizar.');
+  });
+
   it('finaliza com versões, denominador e sem interpretação automática', () => {
     const draft = createSemanticFluencyDraft({ patientId: 'patient-1' });
     const { result, errors } = finalizeSemanticFluencyDraft({
@@ -100,6 +145,27 @@ describe('rascunho de fluência semântica', () => {
         elapsedSeconds: 60,
       },
       responses: [{ id: 'response-1', term: 'item', timestampSeconds: 5, classification: 'valid', decisionNote: '' }],
+      clinicalCriteria: [{
+        id: 'criterion-1',
+        description: 'Critério autoral',
+        supportingEvidence: 'Evidência registrada',
+        source: 'Protocolo interno',
+        version: 'professional-defined-v1',
+      }],
+      plannedActions: [{
+        id: 'action-1',
+        objective: 'Objetivo autoral',
+        description: 'Ação autoral',
+        rationale: 'Justificativa profissional',
+        priority: 'medium',
+        timeframe: '30 dias',
+        followUpIndicator: 'Novo registro descritivo',
+      }],
+      professionalReview: {
+        professionalName: 'Dra. Ana Silva',
+        professionalRegistration: 'CRFa 4-12345',
+        responsibilityAccepted: true,
+      },
     }, '2026-07-14T12:00:00.000Z');
 
     expect(errors).toEqual([]);
@@ -108,6 +174,9 @@ describe('rascunho de fluência semântica', () => {
     expect(result.objectiveSummary.denominator).toBe(1);
     expect(result.scoringVersion).toBe('1.0.0-descriptive');
     expect(result.clinicalInterpretation).toBe('');
+    expect(result.clinicalCriteria[0].description).toBe('Critério autoral');
+    expect(result.plannedActions[0].objective).toBe('Objetivo autoral');
+    expect(result.professionalReview.reviewedAt).toBe('2026-07-14T12:00:00.000Z');
   });
 });
 

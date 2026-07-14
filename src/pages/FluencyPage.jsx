@@ -6,7 +6,7 @@ import useStore from '../store/useStore';
 export default function FluencyPage() {
   const { patientId, mode } = useParams();
   const navigate = useNavigate();
-  const { patients, saveAssessmentResults, currentUser } = useStore();
+  const { patients, saveAssessmentResults, currentUser, therapistSettings } = useStore();
   const patient = patients.find((p) => p.id === patientId);
 
   if (!patient) {
@@ -23,6 +23,10 @@ export default function FluencyPage() {
         patient={patient}
         mode={mode || 'verbal'}
         draftScope={currentUser?.uid || 'guest'}
+        professional={{
+          name: therapistSettings?.name || '',
+          registration: therapistSettings?.crfa || '',
+        }}
         onBack={() => navigate('/dashboard')}
         onSaveAssessment={handleSave}
         onComplete={() => navigate('/dashboard')}

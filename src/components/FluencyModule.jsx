@@ -4,11 +4,15 @@ import AssessmentTimer from './shared/AssessmentTimer';
 import AssessmentSummary from './shared/AssessmentSummary';
 import { FLUENCY_SPEECH_DISFLUENCIES } from '../store/assessments/items/fluencyItems';
 import {
+  CLINICAL_ACTION_PRIORITIES,
   SEMANTIC_FLUENCY_CLASSIFICATIONS,
   SEMANTIC_FLUENCY_MODULE_VERSION,
+  SEMANTIC_FLUENCY_PURPOSE,
   SEMANTIC_FLUENCY_SCORING_VERSION,
   calculateSemanticFluencySummary,
   clampTimestamp,
+  createSemanticFluencyAction,
+  createSemanticFluencyCriterion,
   createSemanticFluencyDraft,
   createSemanticFluencyResponse,
   finalizeSemanticFluencyDraft,
@@ -36,6 +40,17 @@ const SYNC_LABELS = {
   failed: 'falha na sincronização',
 };
 
+function markProfessionalReviewPending(draft) {
+  return {
+    ...draft,
+    professionalReview: {
+      ...draft.professionalReview,
+      responsibilityAccepted: false,
+      reviewedAt: null,
+    },
+  };
+}
+
 export default function FluencyModule(props) {
   if (props.mode === 'speech') return <SpeechFluencyAssessment {...props} />;
   return <SemanticFluencyAssessment {...props} />;
@@ -47,6 +62,7 @@ function SemanticFluencyAssessment({
   onSaveAssessment,
   onComplete,
   draftScope = 'guest',
+  professional = {},
 }) {
   const draftKey = useMemo(() => getSemanticFluencyDraftKey({
     patientId: patient.id,
@@ -55,13 +71,26 @@ function SemanticFluencyAssessment({
 
   const [draft, setDraft] = useState(() => (
     loadSemanticFluencyDraft(window.localStorage, draftKey, patient.id)
-    || createSemanticFluencyDraft({ patientId: patient.id, authorId: draftScope })
+    || createSemanticFluencyDraft({ patientId: patient.id, authorId: draftScope, professional })
   ));
   const [syncStatus, setSyncStatus] = useState('saving_local');
   const [isRunning, setIsRunning] = useState(false);
   const [term, setTerm] = useState('');
   const [classification, setClassification] = useState('valid');
   const [validationErrors, setValidationErrors] = useState([]);
+  const isGuestDraft = draftScope === 'guest';
+
+  useEffect(() => {
+    if (!professional.name && !professional.registration) return;
+    setDraft(previous => ({
+      ...markProfessionalReviewPending(previous),
+      professionalReview: {
+        ...markProfessionalReviewPending(previous).professionalReview,
+        professionalName: previous.professionalReview?.professionalName || professional.name || '',
+        professionalRegistration: previous.professionalReview?.professionalRegistration || professional.registration || '',
+      },
+    }));
+  }, [professional.name, professional.registration]);
 
   useEffect(() => {
     setSyncStatus('saving_local');
@@ -82,10 +111,10 @@ function SemanticFluencyAssessment({
       setDraft(previous => {
         const nextElapsed = Math.min(60, (previous.context.elapsedSeconds || 0) + 1);
         if (nextElapsed >= 60) setIsRunning(false);
-        return {
+        return markProfessionalReviewPending({
           ...previous,
           context: { ...previous.context, elapsedSeconds: nextElapsed },
-        };
+        });
       });
     }, 1000);
     return () => window.clearInterval(intervalId);
@@ -97,7 +126,7 @@ function SemanticFluencyAssessment({
   );
 
   const updateContext = (field, value) => {
-    setDraft(previous => ({
+    setDraft(previous => markProfessionalReviewPending({
       ...previous,
       context: { ...previous.context, [field]: value },
     }));
@@ -110,13 +139,13 @@ function SemanticFluencyAssessment({
       timestampSeconds: draft.context.elapsedSeconds,
       classification,
     });
-    setDraft(previous => ({ ...previous, responses: [...previous.responses, response] }));
+    setDraft(previous => markProfessionalReviewPending({ ...previous, responses: [...previous.responses, response] }));
     setTerm('');
     setClassification('valid');
   };
 
   const updateResponse = (responseId, updates) => {
-    setDraft(previous => ({
+    setDraft(previous => markProfessionalReviewPending({
       ...previous,
       responses: previous.responses.map(response => (
         response.id === responseId ? { ...response, ...updates } : response
@@ -125,9 +154,69 @@ function SemanticFluencyAssessment({
   };
 
   const removeResponse = (responseId) => {
-    setDraft(previous => ({
+    setDraft(previous => markProfessionalReviewPending({
       ...previous,
       responses: previous.responses.filter(response => response.id !== responseId),
+    }));
+  };
+
+  const addClinicalCriterion = () => {
+    setDraft(previous => markProfessionalReviewPending({
+      ...previous,
+      clinicalCriteria: [...(previous.clinicalCriteria || []), createSemanticFluencyCriterion()],
+    }));
+  };
+
+  const updateClinicalCriterion = (criterionId, updates) => {
+    setDraft(previous => markProfessionalReviewPending({
+      ...previous,
+      clinicalCriteria: (previous.clinicalCriteria || []).map(criterion => (
+        criterion.id === criterionId ? { ...criterion, ...updates } : criterion
+      )),
+    }));
+  };
+
+  const removeClinicalCriterion = (criterionId) => {
+    setDraft(previous => markProfessionalReviewPending({
+      ...previous,
+      clinicalCriteria: (previous.clinicalCriteria || []).filter(criterion => criterion.id !== criterionId),
+    }));
+  };
+
+  const addPlannedAction = () => {
+    setDraft(previous => markProfessionalReviewPending({
+      ...previous,
+      plannedActions: [...(previous.plannedActions || []), createSemanticFluencyAction()],
+    }));
+  };
+
+  const updatePlannedAction = (actionId, updates) => {
+    setDraft(previous => markProfessionalReviewPending({
+      ...previous,
+      plannedActions: (previous.plannedActions || []).map(action => (
+        action.id === actionId ? { ...action, ...updates } : action
+      )),
+    }));
+  };
+
+  const removePlannedAction = (actionId) => {
+    setDraft(previous => markProfessionalReviewPending({
+      ...previous,
+      plannedActions: (previous.plannedActions || []).filter(action => action.id !== actionId),
+    }));
+  };
+
+  const updateProfessionalReview = (field, value) => {
+    setDraft(previous => ({
+      ...previous,
+      professionalReview: {
+        ...previous.professionalReview,
+        [field]: value,
+        responsibilityAccepted: field === 'responsibilityAccepted'
+          ? value === true
+          : false,
+        reviewedAt: null,
+      },
     }));
   };
 
@@ -142,6 +231,10 @@ function SemanticFluencyAssessment({
   };
 
   const handleFinalize = async () => {
+    if (isGuestDraft) {
+      setValidationErrors(['Entre com uma conta profissional para finalizar. O modo convidado é somente para demonstração sem dados reais.']);
+      return;
+    }
     const { errors, result } = finalizeSemanticFluencyDraft(draft);
     setValidationErrors(errors);
     if (!result) return;
@@ -172,10 +265,15 @@ function SemanticFluencyAssessment({
       />
 
       <div className="glass-panel" style={{ padding: '1rem', borderColor: '#10b981' }}>
-        <p style={{ fontWeight: 700, marginBottom: '0.35rem' }}>Instrumento autoral em teste de campo</p>
+        <p style={{ fontWeight: 700, marginBottom: '0.35rem' }}>Registro autoral de apoio clínico em teste de campo</p>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.5 }}>
-          Registro descritivo. Não produz diagnóstico, classificação normativa ou indicação de desempenho esperado para idade e escolaridade.
+          {SEMANTIC_FLUENCY_PURPOSE}
         </p>
+        {isGuestDraft && (
+          <p role="note" style={{ color: 'var(--warning-color)', fontSize: '0.8rem', marginTop: '0.65rem' }}>
+            Modo demonstração: não use dados reais. Entre com uma conta profissional para finalizar o registro.
+          </p>
+        )}
       </div>
 
       <div className="glass-panel" style={{ padding: '1.25rem', display: 'grid', gap: '1rem' }}>
@@ -308,11 +406,158 @@ function SemanticFluencyAssessment({
         <textarea
           aria-label="Observações profissionais"
           value={draft.clinicalNotes}
-          onChange={event => setDraft(previous => ({ ...previous, clinicalNotes: event.target.value }))}
+          onChange={event => setDraft(previous => markProfessionalReviewPending({ ...previous, clinicalNotes: event.target.value }))}
           placeholder="Registre observações separadas dos dados objetivos"
           rows={3}
           style={{ ...fieldStyle, resize: 'vertical' }}
         />
+      </div>
+
+      <div className="glass-panel" style={{ padding: '1.25rem', display: 'grid', gap: '1rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <div>
+            <h4 style={{ fontSize: '0.95rem', fontWeight: 700 }}>Critérios clínicos adotados pela profissional</h4>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', marginTop: '0.25rem' }}>
+              O sistema apenas registra os critérios e as evidências informadas; não cria limites ou interpretações.
+            </p>
+          </div>
+          <button className="btn btn-secondary" onClick={addClinicalCriterion}>Adicionar critério</button>
+        </div>
+        {(draft.clinicalCriteria || []).length === 0 ? (
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Nenhum critério clínico registrado.</p>
+        ) : (draft.clinicalCriteria || []).map((criterion, index) => (
+          <div key={criterion.id} style={{ border: '1px solid var(--border-color)', borderRadius: '10px', padding: '1rem', display: 'grid', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem' }}>
+              <strong style={{ fontSize: '0.85rem' }}>Critério {index + 1}</strong>
+              <button className="btn btn-danger" onClick={() => removeClinicalCriterion(criterion.id)}>Excluir critério</button>
+            </div>
+            <label className="form-group" style={{ margin: 0 }}>
+              <span>Descrição do critério *</span>
+              <textarea
+                aria-label={`Descrição do critério ${index + 1}`}
+                value={criterion.description}
+                onChange={event => updateClinicalCriterion(criterion.id, { description: event.target.value })}
+                rows={2}
+                placeholder="Critério definido pela profissional"
+                style={{ ...fieldStyle, resize: 'vertical' }}
+              />
+            </label>
+            <label className="form-group" style={{ margin: 0 }}>
+              <span>Evidência considerada *</span>
+              <textarea
+                aria-label={`Evidência do critério ${index + 1}`}
+                value={criterion.supportingEvidence}
+                onChange={event => updateClinicalCriterion(criterion.id, { supportingEvidence: event.target.value })}
+                rows={2}
+                placeholder="Relacione o critério aos registros observados"
+                style={{ ...fieldStyle, resize: 'vertical' }}
+              />
+            </label>
+            <label className="form-group" style={{ margin: 0 }}>
+              <span>Fonte, protocolo interno ou observação</span>
+              <input
+                aria-label={`Fonte do critério ${index + 1}`}
+                value={criterion.source}
+                onChange={event => updateClinicalCriterion(criterion.id, { source: event.target.value })}
+                placeholder="Opcional"
+                style={fieldStyle}
+              />
+            </label>
+          </div>
+        ))}
+      </div>
+
+      <div className="glass-panel" style={{ padding: '1.25rem', display: 'grid', gap: '0.75rem' }}>
+        <h4 style={{ fontSize: '0.95rem', fontWeight: 700 }}>Síntese clínica da profissional</h4>
+        <textarea
+          aria-label="Síntese clínica da profissional"
+          value={draft.clinicalSynthesis || ''}
+          onChange={event => setDraft(previous => markProfessionalReviewPending({ ...previous, clinicalSynthesis: event.target.value }))}
+          placeholder="Campo autoral e opcional. O sistema não preenche este conteúdo automaticamente."
+          rows={3}
+          style={{ ...fieldStyle, resize: 'vertical' }}
+        />
+      </div>
+
+      <div className="glass-panel" style={{ padding: '1.25rem', display: 'grid', gap: '1rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <div>
+            <h4 style={{ fontSize: '0.95rem', fontWeight: 700 }}>Ações formuladas pela profissional</h4>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', marginTop: '0.25rem' }}>
+              Nenhuma ação é recomendada automaticamente pelo TeaFono.
+            </p>
+          </div>
+          <button className="btn btn-secondary" onClick={addPlannedAction}>Adicionar ação</button>
+        </div>
+        {(draft.plannedActions || []).length === 0 ? (
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Nenhuma ação profissional registrada.</p>
+        ) : (draft.plannedActions || []).map((action, index) => (
+          <div key={action.id} style={{ border: '1px solid var(--border-color)', borderRadius: '10px', padding: '1rem', display: 'grid', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem' }}>
+              <strong style={{ fontSize: '0.85rem' }}>Ação {index + 1}</strong>
+              <button className="btn btn-danger" onClick={() => removePlannedAction(action.id)}>Excluir ação</button>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem' }}>
+              <label className="form-group" style={{ margin: 0 }}>
+                <span>Objetivo *</span>
+                <input aria-label={`Objetivo da ação ${index + 1}`} value={action.objective} onChange={event => updatePlannedAction(action.id, { objective: event.target.value })} style={fieldStyle} />
+              </label>
+              <label className="form-group" style={{ margin: 0 }}>
+                <span>Prioridade</span>
+                <select aria-label={`Prioridade da ação ${index + 1}`} value={action.priority} onChange={event => updatePlannedAction(action.id, { priority: event.target.value })} style={fieldStyle}>
+                  {CLINICAL_ACTION_PRIORITIES.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
+                </select>
+              </label>
+            </div>
+            <label className="form-group" style={{ margin: 0 }}>
+              <span>Ação definida *</span>
+              <textarea aria-label={`Descrição da ação ${index + 1}`} value={action.description} onChange={event => updatePlannedAction(action.id, { description: event.target.value })} rows={2} style={{ ...fieldStyle, resize: 'vertical' }} />
+            </label>
+            <label className="form-group" style={{ margin: 0 }}>
+              <span>Justificativa profissional *</span>
+              <textarea aria-label={`Justificativa da ação ${index + 1}`} value={action.rationale} onChange={event => updatePlannedAction(action.id, { rationale: event.target.value })} rows={2} style={{ ...fieldStyle, resize: 'vertical' }} />
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem' }}>
+              <label className="form-group" style={{ margin: 0 }}>
+                <span>Prazo ou frequência</span>
+                <input aria-label={`Prazo da ação ${index + 1}`} value={action.timeframe} onChange={event => updatePlannedAction(action.id, { timeframe: event.target.value })} style={fieldStyle} />
+              </label>
+              <label className="form-group" style={{ margin: 0 }}>
+                <span>Indicador de acompanhamento</span>
+                <input aria-label={`Indicador da ação ${index + 1}`} value={action.followUpIndicator} onChange={event => updatePlannedAction(action.id, { followUpIndicator: event.target.value })} style={fieldStyle} />
+              </label>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="glass-panel" style={{ padding: '1.25rem', display: 'grid', gap: '1rem', borderColor: 'var(--secondary-color)' }}>
+        <div>
+          <h4 style={{ fontSize: '0.95rem', fontWeight: 700 }}>Revisão e responsabilidade profissional</h4>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', marginTop: '0.25rem' }}>
+            Esta confirmação registra autoria e revisão no TeaFono; não substitui assinatura eletrônica exigida para documentos formais.
+          </p>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem' }}>
+          <label className="form-group" style={{ margin: 0 }}>
+            <span>Nome da profissional *</span>
+            <input aria-label="Nome da profissional responsável" value={draft.professionalReview?.professionalName || ''} onChange={event => updateProfessionalReview('professionalName', event.target.value)} style={fieldStyle} />
+          </label>
+          <label className="form-group" style={{ margin: 0 }}>
+            <span>Registro profissional *</span>
+            <input aria-label="Registro profissional responsável" value={draft.professionalReview?.professionalRegistration || ''} onChange={event => updateProfessionalReview('professionalRegistration', event.target.value)} placeholder="Ex.: CRFa 4-12345" style={fieldStyle} />
+          </label>
+        </div>
+        <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.5 }}>
+          <input
+            aria-label="Confirmar revisão profissional"
+            type="checkbox"
+            checked={draft.professionalReview?.responsibilityAccepted === true}
+            onChange={event => updateProfessionalReview('responsibilityAccepted', event.target.checked)}
+            style={{ marginTop: '0.2rem' }}
+          />
+          Confirmo que revisei os dados, defini os critérios e ações eventualmente registrados e assumo responsabilidade pelo conteúdo profissional.
+        </label>
       </div>
 
       <AssessmentSummary
@@ -338,7 +583,7 @@ function SemanticFluencyAssessment({
         )}
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginTop: '1rem', flexWrap: 'wrap' }}>
           <button className="btn btn-secondary" onClick={handleSaveDraft}>Salvar rascunho</button>
-          <button className="btn btn-primary" onClick={handleFinalize}>Finalizar registro descritivo</button>
+          <button className="btn btn-primary" onClick={handleFinalize} disabled={isGuestDraft}>Finalizar registro de apoio clínico</button>
           <span role="status" style={{ color: syncStatus === 'failed' ? '#ef4444' : 'var(--text-secondary)', fontSize: '0.8rem' }}>
             {SYNC_LABELS[syncStatus]}
           </span>

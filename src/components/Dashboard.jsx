@@ -200,7 +200,7 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', flexDirection: 'column' }}>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <Search size={16} style={{ position: 'absolute', left: '12px', color: 'var(--text-muted)' }} />
-              <input type="text" placeholder="Buscar por nome ou diagnóstico..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+              <input type="text" placeholder="Buscar por nome ou contexto clínico..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
                 style={{ width: '100%', padding: '0.65rem 0.65rem 0.65rem 2.25rem', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '0.85rem' }} />
             </div>
           </div>
@@ -232,8 +232,8 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
                   </select>
                 </div>
                 <div className="form-group">
-                  <label>Diagnóstico / Nível de Suporte</label>
-                  <input type="text" value={newDiagnosis} onChange={e => setNewDiagnosis(e.target.value)} placeholder="Ex: TEA Nível 1 de Suporte" />
+                  <label>Contexto clínico informado (opcional)</label>
+                  <input type="text" value={newDiagnosis} onChange={e => setNewDiagnosis(e.target.value)} placeholder="Informação registrada pela profissional ou proveniente do prontuário" />
                 </div>
               </div>
               <div className="form-group">
@@ -261,7 +261,7 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
                   <div>
                     <h4 style={{ fontWeight: 700, fontSize: '0.95rem' }}>{p.name}</h4>
                     <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-                      {p.age} anos • {p.gender} • {p.diagnosis || "Sem queixa"}
+                      {p.age} anos • {p.gender} • {p.diagnosis || "Contexto clínico não informado"}
                     </p>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }} onClick={e => e.stopPropagation()}>
@@ -319,7 +319,7 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
                     </select>
                   </div>
                   <div className="form-group">
-                    <label>Diagnóstico</label>
+                    <label>Contexto clínico informado</label>
                     <input type="text" value={editDiagnosis} onChange={e => setEditDiagnosis(e.target.value)} />
                   </div>
                 </div>
@@ -343,7 +343,7 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
                     </button>
                   </div>
                   <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                    <strong>Diagnóstico/Nível:</strong> {selectedPatient.diagnosis || "Não informado"}
+                    <strong>Contexto clínico informado:</strong> {selectedPatient.diagnosis || "Não informado"}
                   </p>
                   {selectedPatient.birthDate && (
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
@@ -358,7 +358,7 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
                 </div>
 
                   <div>
-                    <h5 style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>Avaliações Fonoaudiológicas</h5>
+                    <h5 style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>Módulos de registro e apoio clínico</h5>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                       <button className="btn btn-primary" onClick={() => onStartAssessment('anamnese')} style={{ justifyContent: 'flex-start', background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' }}>
                         Anamnese Fonoaudiológica
@@ -436,7 +436,7 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
                             </div>
                           </div>
                           <button className="btn btn-secondary" onClick={() => onViewReport(hist.id)} style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem' }}>
-                            Laudo
+                            Relatório de apoio
                           </button>
                         </div>
                       ))}
