@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Play, Trash2, Camera } from 'lucide-react';
+import { generateCardId } from '../utils/idGenerator';
 
 export default function ComunicaTeaModule({ patient, onBack }) {
   // Lista inicial de cartões padrão da prancha de CAA (Padrão de Cores Oficial)
@@ -34,7 +35,14 @@ export default function ComunicaTeaModule({ patient, onBack }) {
 
   const [cards, setCards] = useState(() => {
     const stored = localStorage.getItem(`caa_cards_${patient.id}`);
-    return stored ? JSON.parse(stored) : defaultCards;
+    if (!stored) return defaultCards;
+
+    try {
+      return JSON.parse(stored);
+    } catch (e) {
+      console.error('[ComunicaTeaModule] Erro ao parsear cartões salvos:', e);
+      return defaultCards;
+    }
   });
 
   const [phrase, setPhrase] = useState([]);
@@ -188,7 +196,7 @@ export default function ComunicaTeaModule({ patient, onBack }) {
     const dataUrl = canvas.toDataURL('image/png');
 
     const newCard = {
-      id: 'custom_' + Date.now(),
+      id: generateCardId(),
       text: newCardText,
       category: newCardCategory,
       image: dataUrl // armazena base64
