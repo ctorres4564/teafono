@@ -7,7 +7,6 @@ import DashboardPage from './pages/DashboardPage';
 import MchatPage from './pages/MchatPage';
 import FollowUpPage from './pages/FollowUpPage';
 import PragmaticsPage from './pages/PragmaticsPage';
-import AnamnesePage from './pages/AnamnesePage';
 import BambiPage from './pages/BambiPage';
 import CaaPage from './pages/CaaPage';
 import ReportPage from './pages/ReportPage';
@@ -83,7 +82,6 @@ export default function App() {
           <Route path="/mchat/:patientId" element={<MchatPage />} />
           <Route path="/followup/:patientId" element={<FollowUpPage />} />
           <Route path="/pragmatics/:patientId" element={<PragmaticsPage />} />
-          <Route path="/anamnese/:patientId/:entryId?" element={<AnamnesePage />} />
           <Route path="/bambi/:patientId" element={<BambiPage />} />
           <Route path="/caa/:patientId" element={<CaaPage />} />
           <Route path="/report/:patientId/:reportId" element={<ReportPage />} />

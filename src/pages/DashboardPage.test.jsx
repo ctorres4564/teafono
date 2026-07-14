@@ -9,6 +9,7 @@ vi.mock('../components/Dashboard', () => ({
     <div>
       <button onClick={() => onStartAssessment('fluency_verbal')}>Abrir fluência semântica</button>
       <button onClick={() => onStartAssessment('fluency_speech')}>Abrir fluência da fala</button>
+      <button onClick={() => onStartAssessment('anamnese')}>Tentar abrir anamnese</button>
     </div>
   ),
 }));
@@ -55,5 +56,11 @@ describe('rotas dos módulos de fluência', () => {
     renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'Abrir fluência da fala' }));
     expect(screen.getByLabelText('rota atual')).toHaveTextContent('/fluency/patient-1/speech');
+  });
+
+  it('ignora tentativas de abrir o módulo de anamnese desabilitado', () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Tentar abrir anamnese' }));
+    expect(screen.getByLabelText('rota atual')).toHaveTextContent('/dashboard');
   });
 });

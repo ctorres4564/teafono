@@ -26,7 +26,6 @@ export default function DashboardPage() {
     }
 
     const routeMap = {
-      anamnese: 'anamnese',
       mchat: 'mchat',
       pragmatics: 'pragmatics',
       bambi: 'bambi',
@@ -37,8 +36,6 @@ export default function DashboardPage() {
     const route = routeMap[moduleName];
     if (route) {
       navigate(`/${route}/${active.id}`);
-    } else {
-      navigate(`/${moduleName}/${active.id}`);
     }
   };
 
@@ -56,12 +53,6 @@ export default function DashboardPage() {
     navigate(`/caa/${active.id}`);
   };
 
-  const handleEditAssessment = (moduleName, entryId) => {
-    const active = useStore.getState().getActivePatient();
-    if (!active) return;
-    navigate(`/${moduleName}/${active.id}/${entryId}`);
-  };
-
   return (
     <Dashboard
       patients={patients}
@@ -74,7 +65,6 @@ export default function DashboardPage() {
       onStartAssessment={handleStartAssessment}
       onViewReport={handleViewReport}
       onGoToCaa={handleGoToCaa}
-      onEditAssessment={handleEditAssessment}
     />
   );
 }
