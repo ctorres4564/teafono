@@ -732,7 +732,7 @@ export default function AnamneseModule({ patient, onBack, onSaveAssessment, init
           Ações
         </h4>
         <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-          Ao finalizar, a anamnese será salva no histórico do paciente e poderá ser consultada no laudo.
+          Ao finalizar, a anamnese será salva no histórico do paciente e poderá ser consultada no relatório de apoio clínico.
         </p>
         <button
           className="btn btn-primary"

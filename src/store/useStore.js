@@ -225,6 +225,8 @@ const useStore = create(
           resultsCopy = { ...results };
         }
 
+        const evalId = entryId || generateAssessmentId();
+
         if (entryId) {
           const existingIdx = patientCopy.history.findIndex((h) => h.id === entryId);
           if (existingIdx !== -1) {
@@ -235,14 +237,14 @@ const useStore = create(
             };
           } else {
             patientCopy.history.unshift({
-              id: entryId,
+              id: evalId,
               date: new Date().toISOString(),
               results: { [moduleName]: resultsCopy },
             });
           }
         } else {
           patientCopy.history.unshift({
-            id: generateAssessmentId(),
+            id: evalId,
             date: new Date().toISOString(),
             results: { [moduleName]: resultsCopy },
           });
@@ -250,7 +252,6 @@ const useStore = create(
 
         const updatedPatients = [...patients];
         updatedPatients[patientIdx] = patientCopy;
-        const evalId = patientCopy.history[0].id;
 
         set({ patients: updatedPatients, activePatientId: pid, activeReportId: evalId });
 

@@ -1,6 +1,6 @@
 # TeaFono - Avaliação e Intervenção Fonoaudiológica no Autismo (TEA)
 
-Sistema de avaliação e intervenção fonoaudiológica especializado no Transtorno do Espectro Autista (TEA). Plataforma de triagem, avaliação, comunicação alternativa e geração de laudos para fonoaudiólogos.
+Sistema de registro estruturado e apoio à formulação clínica em Fonoaudiologia. Organiza dados objetivos, resumos descritivos, critérios e ações definidos pela profissional, sem realizar diagnóstico ou recomendação automática.
 
 ## Funcionalidades
 
@@ -8,7 +8,7 @@ Sistema de avaliação e intervenção fonoaudiológica especializado no Transto
 - **Pragmática (Fernandes)** — Perfil funcional da comunicação com cronômetro, contagem de meios comunicativos e funções
 - **BAMBI** — Inventário de comportamento alimentar com 18 questões em escala Likert
 - **CAA (Comunicação Alternativa)** — Prancha vocalizada com síntese de voz, sugestões inteligentes e captura de imagens pela câmera
-- **Laudos** — Geração de laudos profissionais com impressão e exportação PDF
+- **Relatórios de apoio clínico** — Registros profissionais com impressão e exportação PDF
 - **PTS com IA** — Plano Terapêutico Singular com Google Gemini (fallback offline)
 - **Gráficos de evolução** — Visualização da progressão pragmática com Recharts
 - **Autenticação** — Firebase Auth com modo convidado offline
@@ -71,7 +71,7 @@ src/
 │   ├── BambiModule.jsx  # Inventário alimentar BAMBI
 │   ├── PragmaticsModule.jsx  # Perfil pragmático com cronômetro
 │   ├── ComunicaTeaModule.jsx # Prancha de CAA vocalizada
-│   ├── ReportModule.jsx # Laudos + PTS com IA + export PDF
+│   ├── ReportModule.jsx # Relatórios de apoio clínico + export PDF
 │   └── TherapistSettings.jsx # Configurações do fonoaudiólogo
 ├── pages/
 │   ├── LoginPage.jsx

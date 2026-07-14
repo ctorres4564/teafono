@@ -19,14 +19,18 @@ export default function DashboardPage() {
     const active = useStore.getState().getActivePatient();
     if (!active) return;
 
+    if (moduleName === 'fluency_verbal' || moduleName === 'fluency_speech') {
+      const mode = moduleName === 'fluency_verbal' ? 'verbal' : 'speech';
+      navigate(`/fluency/${active.id}/${mode}`);
+      return;
+    }
+
     const routeMap = {
       anamnese: 'anamnese',
       mchat: 'mchat',
       pragmatics: 'pragmatics',
       bambi: 'bambi',
       vocabulary: 'vocabulary',
-      fluency_verbal: 'fluency/verbal',
-      fluency_speech: 'fluency/speech',
       phonology: 'phonology',
     };
 
