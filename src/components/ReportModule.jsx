@@ -4,6 +4,7 @@ import { generatePts } from '../utils/geminiPtsGenerator';
 
 export default function ReportModule({ patient, assessmentId, therapistSettings, onBack }) {
   const assessment = patient.history.find(h => h.id === assessmentId);
+  const [showConsentModal, setShowConsentModal] = useState(false);
   const [showPtsModal, setShowPtsModal] = useState(false);
   const [ptsData, setPtsData] = useState(null);
   const [ptsLoading, setPtsLoading] = useState(false);
@@ -149,12 +150,19 @@ export default function ReportModule({ patient, assessmentId, therapistSettings,
     }
   };
 
-  const handleGeneratePts = async () => {
+  const handleGeneratePts = () => {
+    // NEW: Show consent modal first
+    setShowConsentModal(true);
+  };
+
+  const handleConsentConfirm = async () => {
+    // User confirmed sharing data with Gemini
+    setShowConsentModal(false);
     setShowPtsModal(true);
     setPtsLoading(true);
     setPtsError('');
     setPtsData(null);
-    
+
     try {
       const data = await generatePts(patient, results, { useGemini: true });
       setPtsData(data);
@@ -170,6 +178,10 @@ export default function ReportModule({ patient, assessmentId, therapistSettings,
     } finally {
       setPtsLoading(false);
     }
+  };
+
+  const handleConsentCancel = () => {
+    setShowConsentModal(false);
   };
 
   const getRiskColor = (risk) => {
@@ -604,6 +616,86 @@ export default function ReportModule({ patient, assessmentId, therapistSettings,
             <button className="btn btn-secondary" onClick={() => setShowPtsModal(false)} style={{ alignSelf: 'flex-end' }}>
               Fechar
             </button>
+          </div>
+        </div>
+      )}
+
+      {showConsentModal && (
+        <div className="no-print" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+          <div className="glass-panel card" style={{ maxWidth: '550px', width: '100%', padding: '2rem', gap: '1.5rem' }}>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '1rem' }}>
+              Autorização para Uso de IA
+            </h3>
+
+            <div style={{ fontSize: '0.95rem', lineHeight: '1.6', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <p>
+                Para gerar o <strong>Plano Terapêutico Singular (PTS)</strong> com inteligência artificial, seus dados clínicos <strong>(anonimizados)</strong> serão compartilhados com a <strong>Google Gemini API</strong>.
+              </p>
+
+              <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <strong style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>✅ Dados Compartilhados (Anônimos):</strong>
+                <ul style={{ paddingLeft: '1.25rem', fontSize: '0.9rem', display: 'flex', flexDirection: 'column', gap: '0.3rem', color: 'var(--text-secondary)' }}>
+                  <li>Idade do paciente</li>
+                  <li>Gênero</li>
+                  <li>Queixa fonoaudiológica</li>
+                  <li>Resultados de avaliações (M-CHAT, Pragmática, BAMBI)</li>
+                </ul>
+              </div>
+
+              <div style={{ padding: '1rem', background: 'rgba(239,68,68,0.05)', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.2)' }}>
+                <strong style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--danger-color)' }}>❌ Dados NÃO Compartilhados:</strong>
+                <ul style={{ paddingLeft: '1.25rem', fontSize: '0.9rem', display: 'flex', flexDirection: 'column', gap: '0.3rem', color: 'var(--text-secondary)' }}>
+                  <li>Nome do paciente</li>
+                  <li>Data de nascimento</li>
+                  <li>Qualquer identificador pessoal</li>
+                </ul>
+              </div>
+
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                <strong>Política de Retenção:</strong> Consulte a <a href="/PRIVACY.md" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-color)', textDecoration: 'underline' }}>Política de Privacidade</a> para informações sobre como o Google processa e retém seus dados.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+              <button
+                onClick={handleConsentConfirm}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem 1rem',
+                  background: 'var(--primary-color)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '0.95rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'opacity 0.2s'
+                }}
+                onMouseEnter={(e) => e.target.style.opacity = '0.9'}
+                onMouseLeave={(e) => e.target.style.opacity = '1'}
+              >
+                ✓ Concordo e Continuar
+              </button>
+              <button
+                onClick={handleConsentCancel}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem 1rem',
+                  background: 'transparent',
+                  color: 'var(--text-secondary)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '8px',
+                  fontSize: '0.95rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'opacity 0.2s'
+                }}
+                onMouseEnter={(e) => e.target.style.opacity = '0.7'}
+                onMouseLeave={(e) => e.target.style.opacity = '1'}
+              >
+                Cancelar
+              </button>
+            </div>
           </div>
         </div>
       )}

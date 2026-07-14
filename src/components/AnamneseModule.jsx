@@ -193,8 +193,26 @@ export default function AnamneseModule({ patient, onBack, onSaveAssessment, init
       ) : (
         <input
           type={type}
+          min={type === 'number' ? '0' : undefined}
+          max={type === 'number' ? '120' : undefined}
           value={value || ''}
-          onChange={e => onChange(type === 'number' ? e.target.value : e.target.value)}
+          onChange={e => {
+            if (type === 'number') {
+              const val = e.target.value;
+              // Allow empty input
+              if (val === '') {
+                onChange('');
+              } else {
+                const num = parseInt(val) || '';
+                // Validate range: 0-120 years for developmental milestones
+                if (num === '' || (num >= 0 && num <= 120)) {
+                  onChange(val);
+                }
+              }
+            } else {
+              onChange(e.target.value);
+            }
+          }}
           placeholder={placeholder}
           style={{ width: '100%' }}
         />

@@ -1,13 +1,39 @@
 import React, { useState } from 'react';
-import { X, Shield, Save } from 'lucide-react';
+import { X, Shield, Save, AlertCircle, CheckCircle } from 'lucide-react';
 
 export default function TherapistSettings({ settings, onSave, onClose }) {
   const [name, setName] = useState(settings?.name || '');
   const [crfa, setCrfa] = useState(settings?.crfa || '');
   const [clinicName, setClinicName] = useState(settings?.clinicName || '');
+  const [crfaError, setCrfaError] = useState('');
+
+  // Validate CRFa format: CRFa N-NNNNN (e.g., CRFa 4-12345)
+  const validateCrfa = (value) => {
+    if (!value) {
+      setCrfaError('');
+      return true;
+    }
+    const pattern = /^CRFa\s\d-\d{5}$/i;
+    if (!pattern.test(value.toUpperCase())) {
+      setCrfaError('Formato inválido. Use: CRFa N-NNNNN (ex: CRFa 4-12345)');
+      return false;
+    }
+    setCrfaError('');
+    return true;
+  };
+
+  const handleCrfaChange = (e) => {
+    const value = e.target.value.toUpperCase();
+    setCrfa(value);
+    validateCrfa(value);
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    // Validate CRFa if provided
+    if (crfa && !validateCrfa(crfa)) {
+      return;
+    }
     onSave({ name, crfa, clinicName });
   };
 
@@ -64,14 +90,27 @@ export default function TherapistSettings({ settings, onSave, onClose }) {
           </div>
 
           <div className="form-group">
-            <label style={{ fontWeight: 600, fontSize: '0.85rem' }}>Registro Profissional (CRFa)</label>
-            <input 
-              type="text" 
-              value={crfa} 
-              onChange={e => setCrfa(e.target.value)} 
+            <label style={{ fontWeight: 600, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              Registro Profissional (CRFa)
+              {crfa && !crfaError && <CheckCircle size={14} style={{ color: 'var(--success-color)' }} />}
+              {crfaError && <AlertCircle size={14} style={{ color: 'var(--danger-color)' }} />}
+            </label>
+            <input
+              type="text"
+              value={crfa}
+              onChange={handleCrfaChange}
+              onBlur={() => validateCrfa(crfa)}
               placeholder="Ex: CRFa 4-12345"
-              required 
+              style={{
+                borderColor: crfaError ? 'var(--danger-color)' : undefined,
+                borderWidth: crfaError ? '1.5px' : undefined
+              }}
             />
+            {crfaError && (
+              <span style={{ fontSize: '0.75rem', color: 'var(--danger-color)', marginTop: '0.25rem', display: 'block' }}>
+                {crfaError}
+              </span>
+            )}
           </div>
 
           <div className="form-group">
