@@ -6,16 +6,15 @@ import useStore from '../store/useStore';
 export default function FluencyPage() {
   const { patientId, mode } = useParams();
   const navigate = useNavigate();
-  const { patients, saveAssessmentResults } = useStore();
+  const { patients, saveAssessmentResults, currentUser } = useStore();
   const patient = patients.find((p) => p.id === patientId);
 
   if (!patient) {
     return <div className="glass-panel card" style={{ padding: '2rem', textAlign: 'center' }}><p>Paciente não encontrado.</p></div>;
   }
 
-  const handleSave = (moduleName, results) => {
-    saveAssessmentResults(moduleName, results);
-    navigate('/dashboard');
+  const handleSave = async (moduleName, results, entryId) => {
+    return saveAssessmentResults(moduleName, results, entryId, patientId);
   };
 
   return (
@@ -23,8 +22,10 @@ export default function FluencyPage() {
       <FluencyModule
         patient={patient}
         mode={mode || 'verbal'}
+        draftScope={currentUser?.uid || 'guest'}
         onBack={() => navigate('/dashboard')}
         onSaveAssessment={handleSave}
+        onComplete={() => navigate('/dashboard')}
       />
     </div>
   );

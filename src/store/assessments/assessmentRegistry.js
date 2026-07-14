@@ -39,12 +39,12 @@ const assessmentRegistry = {
   },
   [ASSESSMENT_TYPES.FLUENCY_VERBAL]: {
     id: ASSESSMENT_TYPES.FLUENCY_VERBAL,
-    name: 'Fluência Verbal',
-    shortName: 'Fluência Verbal',
+    name: 'Fluência Semântica — Evocação Lexical',
+    shortName: 'Fluência Semântica',
     icon: 'MessageCircle',
     color: '#10b981',
     route: '/fluency-verbal',
-    description: 'Avaliação da fluência verbal com contagem de palavras',
+    description: 'Registro descritivo de evocação lexical por categoria',
   },
   [ASSESSMENT_TYPES.FLUENCY_SPEECH]: {
     id: ASSESSMENT_TYPES.FLUENCY_SPEECH,

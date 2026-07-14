@@ -101,10 +101,15 @@ export default function ReportModule({ patient, assessmentId, therapistSettings,
       if (results.fluency_verbal) {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(12);
-        doc.text('5. Fluencia Verbal', margin, y); y += 7;
+        doc.text('5. Fluencia Semantica - Evocacao Lexical', margin, y); y += 7;
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(10);
-        doc.text(`Total palavras: ${results.fluency_verbal.summary?.totalWords || 0}  |  Taxa: ${results.fluency_verbal.summary?.ratePerMinute || 0} pal/min`, margin, y); y += 15;
+        doc.text(
+          `Registros: ${results.fluency_verbal.objectiveSummary?.recordedResponses ?? results.fluency_verbal.summary?.totalWords ?? 0}  |  Validas: ${results.fluency_verbal.objectiveSummary?.validResponses ?? results.fluency_verbal.summary?.uniqueWords ?? 0}`,
+          margin,
+          y
+        ); y += 6;
+        doc.text('Resultado descritivo de instrumento autoral em teste de campo.', margin, y); y += 15;
       }
 
       if (results.fluency_speech) {
@@ -403,22 +408,26 @@ export default function ReportModule({ patient, assessmentId, therapistSettings,
           {results.fluency_verbal && (
             <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '2rem' }}>
               <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#10b981', marginBottom: '0.75rem' }}>
-                5. Fluência Verbal
+                5. Fluência Semântica — Evocação Lexical
               </h3>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginTop: '0.5rem' }}>
                 <div style={{ padding: '1.25rem', background: 'rgba(255,255,255,0.01)', borderRadius: '12px', border: '1px solid var(--border-color)', textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Indicadores</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Resultado descritivo</div>
                   <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#10b981', marginTop: '0.25rem' }}>
-                    {results.fluency_verbal.summary?.ratePerMinute || 0} palavras/min
+                    {results.fluency_verbal.objectiveSummary?.validResponses ?? results.fluency_verbal.summary?.uniqueWords ?? 0} respostas válidas
                   </div>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
-                    Total: {results.fluency_verbal.summary?.totalWords || 0} | Únicas: {results.fluency_verbal.summary?.uniqueWords || 0}
+                    Registros: {results.fluency_verbal.objectiveSummary?.recordedResponses ?? results.fluency_verbal.summary?.totalWords ?? 0}
+                    {' | '}Repetições: {results.fluency_verbal.objectiveSummary?.byClassification?.repetition ?? results.fluency_verbal.counts?.repetitions ?? 0}
                   </div>
                 </div>
                 <div>
                   <p><strong>Observações:</strong></p>
                   <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.5rem', lineHeight: '1.5' }}>
-                    {results.fluency_verbal.notes || 'Nenhuma observação registrada.'}
+                    {results.fluency_verbal.clinicalNotes || results.fluency_verbal.notes || 'Nenhuma observação registrada.'}
+                  </p>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.75rem' }}>
+                    Instrumento autoral em teste de campo. O sistema não realizou interpretação normativa ou diagnóstica.
                   </p>
                 </div>
               </div>

@@ -86,6 +86,32 @@ describe('saveAssessmentResults', () => {
     expect(patient.history[0].results.anamnese.queixa).toBe('atualizada');
     expect(patient.history[0].results.anamnese.observacao).toBe('melhora');
   });
+
+  it('deve ser idempotente ao finalizar repetidamente com o mesmo ID', async () => {
+    getStore().addPatient({ name: 'Lia', age: 7, gender: 'Feminino' });
+    const pid = getStore().patients[0].id;
+    const assessmentId = 'teval_fixed123456';
+
+    await getStore().saveAssessmentResults('fluency_verbal', { status: 'completed', responses: [] }, assessmentId, pid);
+    await getStore().saveAssessmentResults('fluency_verbal', { status: 'completed', responses: [{ id: 'response-1' }] }, assessmentId, pid);
+
+    const patient = getStore().patients[0];
+    expect(patient.history).toHaveLength(1);
+    expect(patient.history[0].id).toBe(assessmentId);
+    expect(patient.history[0].results.fluency_verbal.responses).toHaveLength(1);
+  });
+
+  it('deve retornar o ID atualizado mesmo quando a entrada não é a primeira do histórico', async () => {
+    getStore().addPatient({ name: 'Caio', age: 6, gender: 'Masculino' });
+    const pid = getStore().patients[0].id;
+    await getStore().saveAssessmentResults('fluency_verbal', { version: 1 }, 'teval_semantic01', pid);
+    await getStore().saveAssessmentResults('mchat', { score: 1 }, 'teval_mchat0001', pid);
+
+    const result = await getStore().saveAssessmentResults('fluency_verbal', { version: 2 }, 'teval_semantic01', pid);
+
+    expect(result.entryId).toBe('teval_semantic01');
+    expect(getStore().patients[0].history).toHaveLength(2);
+  });
 });
 
 describe('updatePatient', () => {

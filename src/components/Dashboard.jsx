@@ -376,7 +376,7 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
                         Avaliação de Vocabulário
                       </button>
                       <button className="btn btn-primary" onClick={() => onStartAssessment('fluency_verbal')} style={{ justifyContent: 'flex-start', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}>
-                        Fluência Verbal
+                        Fluência Semântica — Evocação Lexical
                       </button>
                       <button className="btn btn-primary" onClick={() => onStartAssessment('fluency_speech')} style={{ justifyContent: 'flex-start', background: 'linear-gradient(135deg, #14b8a6 0%, #0d9488 100%)' }}>
                         Fluência da Fala
@@ -423,7 +423,9 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
                                 <span className="badge badge-warning" style={{ fontSize: '0.65rem' }}>Vocabulário: {hist.results.vocabulary.summary?.correct || 0} corretas</span>
                               )}
                               {hist.results.fluency_verbal && (
-                                <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>Fluência Verbal: {hist.results.fluency_verbal.summary?.ratePerMinute || 0} pal/min</span>
+                                <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>
+                                  Evocação Lexical: {hist.results.fluency_verbal.objectiveSummary?.validResponses ?? hist.results.fluency_verbal.summary?.uniqueWords ?? 0} válidas
+                                </span>
                               )}
                               {hist.results.fluency_speech && (
                                 <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>Fluência Fala: {hist.results.fluency_speech.summary?.totalDisfluencies || 0} disfluências</span>
