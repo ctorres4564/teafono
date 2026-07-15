@@ -393,6 +393,9 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
                       <button className="btn btn-primary" onClick={() => onStartAssessment('orofacial_motor')} style={{ justifyContent: 'flex-start', background: 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)' }}>
                         😊 Avaliação Miofuncional Orofacial (AMIOFE)
                       </button>
+                      <button className="btn btn-primary" onClick={() => onStartAssessment('phonological_awareness')} style={{ justifyContent: 'flex-start', background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)' }}>
+                        🔤 Avaliação de Consciência Fonológica
+                      </button>
                     </div>
                   </div>
 

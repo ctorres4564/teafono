@@ -31,6 +31,7 @@ export default function DashboardPage() {
       voice: 'voice',
       receptive_language: 'receptive_language',
       orofacial_motor: 'orofacial_motor',
+      phonological_awareness: 'phonological_awareness',
     };
 
     const route = routeMap[moduleName];
