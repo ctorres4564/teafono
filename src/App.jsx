@@ -14,6 +14,7 @@ import ReportPage from './pages/ReportPage';
 import VocabularyPage from './pages/VocabularyPage';
 import FluencyPage from './pages/FluencyPage';
 import PhonologyPage from './pages/PhonologyPage';
+import VoicePage from './pages/VoicePage';
 
 function AuthGuard({ children }) {
   const { currentUser, isGuestMode, authLoading } = useStore();
@@ -90,6 +91,7 @@ export default function App() {
           <Route path="/vocabulary/:patientId" element={<VocabularyPage />} />
           <Route path="/fluency/:patientId/:mode" element={<FluencyPage />} />
           <Route path="/phonology/:patientId" element={<PhonologyPage />} />
+          <Route path="/voice/:patientId" element={<VoicePage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

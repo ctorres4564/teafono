@@ -384,6 +384,9 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
                       <button className="btn btn-primary" onClick={() => onStartAssessment('phonology')} style={{ justifyContent: 'flex-start', background: 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)' }}>
                         Avaliação Fonológica (PCC-R)
                       </button>
+                      <button className="btn btn-primary" onClick={() => onStartAssessment('voice')} style={{ justifyContent: 'flex-start', background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' }}>
+                        🎤 Avaliação de Voz (GRBAS)
+                      </button>
                     </div>
                   </div>
 

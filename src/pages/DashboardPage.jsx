@@ -28,6 +28,7 @@ export default function DashboardPage() {
       fluency_verbal: 'fluency/verbal',
       fluency_speech: 'fluency/speech',
       phonology: 'phonology',
+      voice: 'voice',
     };
 
     const route = routeMap[moduleName];
