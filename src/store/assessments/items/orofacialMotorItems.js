@@ -118,6 +118,36 @@ export const JAW_ASSESSMENT = {
   }
 };
 
+export const PALATE_ASSESSMENT = {
+  position_at_rest: {
+    label: 'Posição em Repouso',
+    options: [
+      'Adequada (véu palatino simétrico e rebaixado)',
+      'Ligeira assimetria em repouso',
+      'Assimetria moderada ou úvula bífida/desviada',
+      'Fissura palatina ou alteração estrutural grave'
+    ]
+  },
+  mobility: {
+    label: 'Mobilidade na Fonação',
+    options: [
+      'Elevação simétrica e adequada',
+      'Elevação presente com ligeira assimetria',
+      'Elevação reduzida uni ou bilateral',
+      'Ausência de elevação ou paralisia'
+    ]
+  },
+  gag_reflex: {
+    label: 'Reflexo de Gag',
+    options: [
+      'Presente e adequado',
+      'Presente, porém diminuído ou hiperativo',
+      'Apenas leve esboço do reflexo',
+      'Ausente'
+    ]
+  }
+};
+
 export const BREATHING_ASSESSMENT = {
   type: {
     label: 'Tipo de Respiração',
@@ -197,6 +227,7 @@ export function getStructureAssessment(structureId) {
     lips: LIPS_ASSESSMENT,
     tongue: TONGUE_ASSESSMENT,
     jaw: JAW_ASSESSMENT,
+    palate: PALATE_ASSESSMENT,
     breathing: BREATHING_ASSESSMENT
   };
   return assessments[structureId] || {};

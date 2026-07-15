@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Volume2, AlertCircle, CheckCircle } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { ArrowLeft, Volume2, AlertCircle, CheckCircle, Mic, Square } from 'lucide-react';
 import AssessmentHeader from './shared/AssessmentHeader';
 import {
   GRBAS_SCALES,
@@ -44,6 +44,47 @@ export default function VoiceModule({ patient, onBack, onSave }) {
   // Observations
   const [observations, setObservations] = useState('');
 
+  // Recording states
+  const [isRecording, setIsRecording] = useState(false);
+  const [audioUrl, setAudioUrl] = useState(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const url = URL.createObjectURL(audioBlob);
+        setAudioUrl(url);
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.error("Erro ao acessar microfone:", err);
+      alert("Não foi possível acessar o microfone. Verifique as permissões do navegador.");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+    }
+  };
+
   const sections = [
     { id: 'grbas', label: 'GRBAS - Qualidade Vocal' },
     { id: 'resonance', label: 'Ressonância' },
@@ -71,6 +112,7 @@ export default function VoiceModule({ patient, onBack, onSave }) {
              jitter: parseFloat(pitch.jitter) || 0,
              shimmer: parseFloat(pitch.shimmer) || 0
            }) : null,
+      audioUrl: audioUrl,
       timestamp: new Date().toISOString()
     };
     onSave(results);
@@ -119,6 +161,59 @@ export default function VoiceModule({ patient, onBack, onSave }) {
               <strong>Instrução:</strong> Avalie a voz do paciente em amostra de fala espontânea (~3-5 minutos).
               Escala 0 = Normal | 3 = Grave
             </p>
+          </div>
+
+          <div style={{ marginBottom: '2rem', padding: '1.5rem', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <h4 style={{ fontSize: '1rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Mic size={18} /> Gravação de Amostra Vocal
+            </h4>
+            
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+              {!isRecording ? (
+                <button
+                  onClick={startRecording}
+                  style={{
+                    padding: '0.75rem 1rem',
+                    background: 'var(--danger-color)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  <Mic size={16} /> Iniciar Gravação
+                </button>
+              ) : (
+                <button
+                  onClick={stopRecording}
+                  style={{
+                    padding: '0.75rem 1rem',
+                    background: 'var(--bg-secondary)',
+                    color: 'var(--danger-color)',
+                    border: '1px solid var(--danger-color)',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  <Square size={16} fill="currentColor" /> Parar Gravação
+                </button>
+              )}
+              {isRecording && <span style={{ color: 'var(--danger-color)', fontWeight: 600, animation: 'pulse 2s infinite' }}>Gravando...</span>}
+            </div>
+
+            {audioUrl && (
+              <div style={{ marginTop: '0.5rem' }}>
+                <audio controls src={audioUrl} style={{ width: '100%' }} />
+              </div>
+            )}
           </div>
 
           {/* GRBAS Parameters */}

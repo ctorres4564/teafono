@@ -14,7 +14,7 @@ import VocabularyPage from './pages/VocabularyPage';
 import FluencyPage from './pages/FluencyPage';
 import PhonologyPage from './pages/PhonologyPage';
 import VoicePage from './pages/VoicePage';
-import ReceptiveLanguagePage from './pages/ReceptiveLanguagePage';
+
 import OrofacialMotorPage from './pages/OrofacialMotorPage';
 import PhonologicalAwarenessPage from './pages/PhonologicalAwarenessPage';
 
@@ -93,7 +93,7 @@ export default function App() {
           <Route path="/fluency/:patientId/:mode" element={<FluencyPage />} />
           <Route path="/phonology/:patientId" element={<PhonologyPage />} />
           <Route path="/voice/:patientId" element={<VoicePage />} />
-          <Route path="/receptive_language/:patientId" element={<ReceptiveLanguagePage />} />
+
           <Route path="/orofacial_motor/:patientId" element={<OrofacialMotorPage />} />
           <Route path="/phonological_awareness/:patientId" element={<PhonologicalAwarenessPage />} />
         </Route>

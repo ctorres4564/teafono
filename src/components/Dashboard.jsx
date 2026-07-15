@@ -384,9 +384,6 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
                       <button className="btn btn-primary" onClick={() => onStartAssessment('voice')} style={{ justifyContent: 'flex-start', background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' }}>
                         🎤 Avaliação de Voz (GRBAS)
                       </button>
-                      <button className="btn btn-primary" onClick={() => onStartAssessment('receptive_language')} style={{ justifyContent: 'flex-start', background: 'linear-gradient(135deg, #a855f7 0%, #9333ea 100%)' }}>
-                        👂 Avaliação de Linguagem Receptiva
-                      </button>
                       <button className="btn btn-primary" onClick={() => onStartAssessment('orofacial_motor')} style={{ justifyContent: 'flex-start', background: 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)' }}>
                         😊 Avaliação Miofuncional Orofacial (AMIOFE)
                       </button>

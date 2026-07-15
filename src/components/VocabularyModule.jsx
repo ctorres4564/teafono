@@ -97,7 +97,10 @@ export default function VocabularyModule({ patient, onBack, onSaveAssessment }) 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '400px', overflowY: 'auto' }}>
         {currentWords.map(word => (
           <div key={word} className="glass-panel" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <div style={{ fontWeight: 700, fontSize: '1rem' }}>{word}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+              <img src={`https://placehold.co/150x150?text=${encodeURIComponent(word)}`} alt={word} style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '2px solid var(--border-color)' }} />
+              <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>{word}</div>
+            </div>
             <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
               {VOCABULARY_RESPONSE_TYPES.map(rt => (
                 <button

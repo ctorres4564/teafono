@@ -97,13 +97,16 @@ export default function PhonologyModule({ patient, onBack, onSaveAssessment }) {
       </div>
 
       <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h4 style={{ fontSize: '1.1rem', fontWeight: 800 }}>
-            Palavra: {current.target}
-          </h4>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-            {selectedWordIdx + 1} de {productions.length}
-          </span>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+          <img src={current.imageUrl || `https://placehold.co/150x150?text=${encodeURIComponent(current.target)}`} alt={current.target} style={{ width: '120px', height: '120px', objectFit: 'cover', borderRadius: '8px', border: '2px solid var(--border-color)' }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+            <h4 style={{ fontSize: '1.2rem', fontWeight: 800 }}>
+              Palavra: {current.target}
+            </h4>
+            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+              {selectedWordIdx + 1} de {productions.length}
+            </span>
+          </div>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
