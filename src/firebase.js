@@ -84,6 +84,14 @@ export async function savePatientToFirestore(patient, userId) {
   try {
     const patientRef = doc(db, 'users', userId, 'patients', patient.id);
     const cleaned = removeUndefined(patient);
+    console.log(`[DIAGNÓSTICO] 📤 ENVIANDO PARA FIRESTORE:`, {
+      path: `users/${userId}/patients/${patient.id}`,
+      hasHistory: !!cleaned.history,
+      historyLength: cleaned.history?.length || 0,
+      lastEntryResults: cleaned.history?.[0]?.results || 'VAZIO',
+      anamneseKeys: Object.keys(cleaned.history?.[0]?.results?.anamnese || {}),
+      cleanedSize: JSON.stringify(cleaned).length,
+    });
     await setDoc(patientRef, cleaned, { merge: true });
     debugLog(`[Firestore] Paciente ${patient.name} (${patient.id}) sincronizado.`);
     return { success: true };
@@ -117,6 +125,20 @@ export async function loadPatientsFromFirestore(userId) {
       list.push(doc.data());
     });
     const sorted = list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    console.log(`[DIAGNÓSTICO] 📖 LIDO DO FIRESTORE:`, {
+      userId,
+      patientCount: sorted.length,
+      patients: sorted.map(p => ({
+        patientId: p.id,
+        patientName: p.name,
+        historyLength: p.history?.length || 0,
+        lastHistoryEntry: sorted[0]?.history?.[0] || null,
+        lastHistoryId: sorted[0]?.history?.[0]?.id,
+        lastHistoryResults: sorted[0]?.history?.[0]?.results || 'VAZIO',
+        lastHistoryAnamnese: sorted[0]?.history?.[0]?.results?.anamnese || 'VAZIO',
+        lastHistoryAnamneseKeys: Object.keys(sorted[0]?.history?.[0]?.results?.anamnese || {}),
+      })),
+    });
     debugLog(`[Firestore] ${sorted.length} pacientes carregados para usuário ${userId}.`);
     return sorted;
   } catch (err) {

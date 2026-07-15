@@ -7,6 +7,20 @@ export default function AnamnesePage() {
   const { patientId, entryId } = useParams();
   const navigate = useNavigate();
   const patient = useStore((s) => s.patients.find((p) => p.id === patientId));
+
+  window.__TEAFONO_DEBUG_PATIENT = patient;
+
+  console.log(
+    '[DIAGNÓSTICO] HISTORY[0].RESULTS JSON:',
+    JSON.stringify(patient?.history?.[0]?.results ?? null, null, 2)
+  );
+
+  console.log(`[DIAGNÓSTICO] 🎯 ANAMNESEPAGE RENDERIZADO - ENTRADA`, {
+    timestamp: new Date().toISOString(),
+    patientId,
+    entryId,
+    patientFound: !!patient,
+  });
   const [saveStatus, setSaveStatus] = useState(null);
 
   const handleSave = useCallback(async (moduleName, results, id) => {
@@ -38,13 +52,69 @@ export default function AnamnesePage() {
     return <div className="glass-panel card" style={{ padding: '2rem', textAlign: 'center' }}><p>Paciente não encontrado.</p></div>;
   }
 
+  // INSPEÇÃO COMPLETA DO PATIENT OBJECT - SEMPRE EXECUTA
+  console.log(`[DIAGNÓSTICO] 🔬 PATIENT OBJECT INSPECTION:`, {
+    "1. patientId": patient?.id,
+    "2. patientName": patient?.name,
+    "3. patient.history.length": patient?.history?.length || 0,
+    "4. patient.history is Array": Array.isArray(patient?.history),
+    "5. patient keys": Object.keys(patient || {}),
+  });
+
+  console.log(`[DIAGNÓSTICO] 🔬 PATIENT.HISTORY COMPLETE CONTENT:`,
+    patient?.history?.map((hist, idx) => ({
+      "historyIndex": idx,
+      "history.id": hist?.id,
+      "history.date": hist?.date,
+      "Object.keys(history)": Object.keys(hist || {}),
+      "Object.keys(history.results)": hist?.results ? Object.keys(hist.results) : "results is null/undefined",
+      "history.results.anamnese EXISTS": !!hist?.results?.anamnese,
+      "history.results.anamnese VALUE": hist?.results?.anamnese,
+      "checkKeyVariations": {
+        "results.anamnese": hist?.results?.anamnese,
+        "results['anamnese']": hist?.results?.['anamnese'],
+        "results.anamnesis": hist?.results?.anamnesis,
+        "results.anamneses": hist?.results?.anamneses,
+      },
+      "completeResults": hist?.results,
+      "completeHistory": hist,
+    })) || "HISTORY IS NULL OR UNDEFINED"
+  );
+
   let initialData = null;
   if (entryId) {
     const historyEntry = patient.history?.find((h) => h.id === entryId);
     if (historyEntry?.results?.anamnese) {
       initialData = historyEntry.results.anamnese;
     }
+    console.log(`[DIAGNÓSTICO] 📋 ANAMNESEPAGE - CARREGANDO DADOS:`, {
+      patientId,
+      entryId,
+      patientFound: !!patient,
+      patientName: patient?.name,
+      patientHistoryLength: patient?.history?.length,
+      historyEntryFound: !!historyEntry,
+      historyEntryId: historyEntry?.id,
+      historyEntryDate: historyEntry?.date,
+      historyEntryResults: historyEntry?.results,
+      anamneseFound: !!historyEntry?.results?.anamnese,
+      initialDataKeys: initialData ? Object.keys(initialData) : null,
+      initialData,
+    });
   }
+
+  // LOG FINAL: MOSTRAR POR QUE initialData É NULL
+  console.log(`[DIAGNÓSTICO] 🔍 INITIALDATA CALCULATION:`, {
+    "entryId provided": !!entryId,
+    "entryId value": entryId,
+    "if (entryId) WILL EXECUTE": !!entryId,
+    "final initialData": initialData,
+    "initialData type": typeof initialData,
+    "initialData is null": initialData === null,
+    "WHY initialData is null": entryId ? (
+      initialData === null ? "historyEntry?.results?.anamnese was falsy" : "data found and assigned"
+    ) : "entryId is falsy so if block never executed",
+  });
 
   return (
     <div className="glass-panel card" style={{ padding: '2rem' }}>

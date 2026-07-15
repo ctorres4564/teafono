@@ -111,9 +111,18 @@ const initialForm = {
 };
 
 export default function AnamneseModule({ patient, onBack, onSaveAssessment, initialData, entryId }) {
+  console.log(`[DIAGNÓSTICO] 🎯 ANAMNESEMODULE RENDERIZADO - ENTRADA`, {
+    timestamp: new Date().toISOString(),
+    patientId: patient?.id,
+    patientName: patient?.name,
+    entryId,
+    initialDataReceived: !!initialData,
+    initialDataKeys: initialData ? Object.keys(initialData) : null,
+  });
+
   const [form, setForm] = useState(() => {
     if (initialData) {
-      return {
+      const filledForm = {
         ...initialForm,
         ...initialData,
         identification: { ...initialForm.identification, ...initialData.identification },
@@ -130,6 +139,24 @@ export default function AnamneseModule({ patient, onBack, onSaveAssessment, init
           affectedAreas: { ...initialForm.diagnosis.affectedAreas, ...initialData.diagnosis?.affectedAreas },
         },
       };
+      console.log(`[DIAGNÓSTICO] 📝 ANAMNESEMODULE - FORMULÁRIO PREENCHIDO:`, {
+        entryId,
+        patientId: patient.id,
+        patientName: patient.name,
+        initialDataReceived: !!initialData,
+        initialDataKeys: Object.keys(initialData || {}),
+        filledForm,
+        identification: filledForm.identification,
+        mainComplaint: filledForm.mainComplaint,
+        swallowing: filledForm.swallowing,
+        auditory: filledForm.auditory,
+        medical: filledForm.medical,
+        global: filledForm.global,
+        observation: filledForm.observation,
+        instruments: filledForm.instruments,
+        diagnosis: filledForm.diagnosis,
+      });
+      return filledForm;
     }
     return {
       ...initialForm,

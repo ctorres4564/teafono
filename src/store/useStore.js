@@ -77,6 +77,17 @@ const useStore = create(
         const key = getStorageKey(currentUser);
         try {
           const data = JSON.stringify(updatedList);
+          console.log(`[DIAGNÓSTICO] 💾 PERSISTINDO LOCALLY:`, {
+            key,
+            patientCount: updatedList.length,
+            payloadSize: data.length,
+            userId: currentUser?.uid,
+            anamneseData: updatedList.map(p => ({
+              patientId: p.id,
+              historyCount: p.history?.length || 0,
+              hasAnamnese: !!p.history?.[0]?.results?.anamnese,
+            })),
+          });
           localStorage.setItem(key, data);
           debugLog(`[persistPatients] Dados salvos em localStorage (chave: ${key}) - ${updatedList.length} pacientes (${data.length} bytes)`);
           localStorage.setItem(key + '_backup', data);
@@ -349,6 +360,20 @@ const useStore = create(
               guestLocalRaw = localStorage.getItem(LOCAL_STORAGE_KEY + '_backup');
             }
 
+            console.log(`[DIAGNÓSTICO] 🔀 ANTES DO MERGE:`, {
+              userKey,
+              firestoreList: firestoreList.map(p => ({
+                patientId: p.id,
+                patientName: p.name,
+                historyLength: p.history?.length || 0,
+                hasAnamnese: !!p.history?.[0]?.results?.anamnese,
+                anamneseKeys: Object.keys(p.history?.[0]?.results?.anamnese || {}),
+              })),
+              firestoreError,
+              userLocalRaw: userLocalRaw ? `STRING (${userLocalRaw.length} bytes)` : 'null',
+              guestLocalRaw: guestLocalRaw ? `STRING (${guestLocalRaw.length} bytes)` : 'null',
+            });
+
             const result = await mergePatients({
                 firestoreList,
                 firestoreError,
@@ -357,6 +382,19 @@ const useStore = create(
                 syncPatientsToFirestore: get().syncPatientsToFirestore,
                 loadAndVerifyFirestore: get().loadAndVerifyFirestore,
               });
+
+            console.log(`[DIAGNÓSTICO] 🔀 DEPOIS DO MERGE:`, {
+              resultPatients: result.patients.map(p => ({
+                patientId: p.id,
+                patientName: p.name,
+                historyLength: p.history?.length || 0,
+                hasAnamnese: !!p.history?.[0]?.results?.anamnese,
+                anamneseKeys: Object.keys(p.history?.[0]?.results?.anamnese || {}),
+                anamneseData: p.history?.[0]?.results?.anamnese,
+              })),
+              isGuestMigration: result.isGuestMigration,
+              migratedCount: result.migratedCount,
+            });
 
               if (result.patients.length > 0) {
                 set({ patients: result.patients });
