@@ -16,6 +16,7 @@ import FluencyPage from './pages/FluencyPage';
 import PhonologyPage from './pages/PhonologyPage';
 import VoicePage from './pages/VoicePage';
 import ReceptiveLanguagePage from './pages/ReceptiveLanguagePage';
+import OrofacialMotorPage from './pages/OrofacialMotorPage';
 
 function AuthGuard({ children }) {
   const { currentUser, isGuestMode, authLoading } = useStore();
@@ -94,6 +95,7 @@ export default function App() {
           <Route path="/phonology/:patientId" element={<PhonologyPage />} />
           <Route path="/voice/:patientId" element={<VoicePage />} />
           <Route path="/receptive_language/:patientId" element={<ReceptiveLanguagePage />} />
+          <Route path="/orofacial_motor/:patientId" element={<OrofacialMotorPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
