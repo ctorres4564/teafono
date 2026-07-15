@@ -6,6 +6,7 @@ import {
   LIPS_ASSESSMENT,
   TONGUE_ASSESSMENT,
   JAW_ASSESSMENT,
+  PALATE_ASSESSMENT,
   BREATHING_ASSESSMENT,
   calculateOrofacialScore,
   getOrofacialRecommendations,
@@ -16,6 +17,7 @@ const ASSESSMENTS = {
   lips: LIPS_ASSESSMENT,
   tongue: TONGUE_ASSESSMENT,
   jaw: JAW_ASSESSMENT,
+  palate: PALATE_ASSESSMENT,
   breathing: BREATHING_ASSESSMENT
 };
 
