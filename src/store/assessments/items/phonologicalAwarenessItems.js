@@ -65,6 +65,7 @@ export function calculatePhonologicalAwarenessScore(responses) {
   const subtests = Object.keys(responses);
   const totalSubtests = subtests.length;
   let totalScore = 0;
+  let maxTotalScore = 0;
   const subtestScores = {};
 
   subtests.forEach(subtest => {
@@ -73,18 +74,19 @@ export function calculatePhonologicalAwarenessScore(responses) {
       const ratingObj = RESPONSE_TYPES.find(r => r.id === response);
       return acc + (ratingObj ? ratingObj.value : 0);
     }, 0);
+    const subtestMax = subtestResponses.length * 2;
 
     subtestScores[subtest] = {
       score: subtestScore,
-      max: subtestResponses.length * 2,
-      percentage: subtestResponses.length > 0 ? Math.round((subtestScore / (subtestResponses.length * 2)) * 100) : 0
+      max: subtestMax,
+      percentage: subtestMax > 0 ? Math.round((subtestScore / subtestMax) * 100) : 0
     };
 
     totalScore += subtestScore;
+    maxTotalScore += subtestMax;
   });
 
-  const maxTotalScore = subtestResponses.length * 2 * (subtests.length || 1);
-  const percentage = totalSubtests > 0 ? Math.round((totalScore / (subtestResponses.length * 2 * subtests.length)) * 100) : 0;
+  const percentage = maxTotalScore > 0 ? Math.round((totalScore / maxTotalScore) * 100) : 0;
 
   return {
     totalScore,

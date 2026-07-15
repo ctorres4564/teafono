@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { calculatePragmatics } from '../utils/teaEvaluations';
+import { interpretPragmatics, pragmaticNorms } from '../utils/developmentalNorms';
 import AssessmentHeader from './shared/AssessmentHeader';
 import AssessmentTimer from './shared/AssessmentTimer';
 import CounterButton from './shared/CounterButton';
 import ProgressBar from './shared/ProgressBar';
 import AssessmentSummary from './shared/AssessmentSummary';
+import { AlertCircle, CheckCircle, TrendingDown } from 'lucide-react';
 
 export default function PragmaticsModule({ patient, onBack, onSaveAssessment }) {
   const [verbal, setVerbal] = useState(0);
@@ -41,6 +43,24 @@ export default function PragmaticsModule({ patient, onBack, onSaveAssessment }) 
   const currentRate = totalActs > 0 && elapsedSeconds > 0
     ? (totalActs / (elapsedSeconds / 60)).toFixed(1)
     : 0;
+
+  // Get age in months from patient for norm comparison
+  const getAgeInMonths = () => {
+    if (!patient.birthDate) return null;
+    const birth = new Date(patient.birthDate);
+    const today = new Date();
+    return Math.floor((today - birth) / (1000 * 60 * 60 * 24 * 30.44));
+  };
+
+  const ageMonths = getAgeInMonths();
+  const ageGroup = ageMonths ? Object.keys(pragmaticNorms).find(key => {
+    const [min, max] = key.split('-').map(Number);
+    return ageMonths >= min && ageMonths <= max;
+  }) : null;
+
+  const developmentalComparison = ageGroup && currentRate > 0
+    ? interpretPragmatics(parseFloat(currentRate), ageMonths)
+    : null;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -112,6 +132,24 @@ export default function PragmaticsModule({ patient, onBack, onSaveAssessment }) 
                 ]}
               />
             )}
+
+            {/* Developmental Comparison */}
+            {developmentalComparison && ageGroup && (
+              <div style={{ marginTop: '1.5rem', padding: '1rem', borderRadius: '8px', background: developmentalComparison.severity === 0 ? 'rgba(16, 185, 129, 0.1)' : developmentalComparison.severity === 1 ? 'rgba(251, 191, 36, 0.1)' : 'rgba(239, 68, 68, 0.1)', borderLeft: `4px solid ${developmentalComparison.severity === 0 ? 'rgb(16, 185, 129)' : developmentalComparison.severity === 1 ? 'rgb(251, 191, 36)' : 'rgb(239, 68, 68)'}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                  {developmentalComparison.severity === 0 && <CheckCircle size={16} style={{ color: 'rgb(16, 185, 129)' }} />}
+                  {developmentalComparison.severity === 1 && <AlertCircle size={16} style={{ color: 'rgb(251, 191, 36)' }} />}
+                  {developmentalComparison.severity >= 2 && <TrendingDown size={16} style={{ color: 'rgb(239, 68, 68)' }} />}
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: developmentalComparison.severity === 0 ? 'rgb(16, 185, 129)' : developmentalComparison.severity === 1 ? 'rgb(251, 191, 36)' : 'rgb(239, 68, 68)' }}>
+                    {developmentalComparison.classification}
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                  <strong>Esperado para {ageGroup} meses:</strong> {pragmaticNorms[ageGroup].atos_min.min}-{pragmaticNorms[ageGroup].atos_min.max} atos/min
+                </div>
+              </div>
+            )}
+
             <button className="btn btn-primary" onClick={handleSave} style={{ marginTop: '0.5rem', height: '44px' }}>
               Finalizar e Salvar Pragmática
             </button>

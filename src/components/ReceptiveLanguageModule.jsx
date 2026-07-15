@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
 import AssessmentHeader from './shared/AssessmentHeader';
-import { calculateReceptiveScore } from '../store/assessments/items/receptiveLanguageItems';
 import {
   RECEPTIVE_CATEGORIES,
   RECEPTIVE_RESPONSE_TYPES,
   getReceptiveItemsByCategory,
+  calculateReceptiveScore,
 } from '../store/assessments/items/receptiveLanguageItems';
-import { volumaryNorms } from '../utils/developmentalNorms';
-import { AlertCircle, CheckCircle, TrendingDown } from 'lucide-react';
 
 export default function ReceptiveLanguageModule({ patient, onBack, onSaveAssessment }) {
   const [selectedCategory, setSelectedCategory] = useState(RECEPTIVE_CATEGORIES[0].id);
@@ -29,9 +27,8 @@ export default function ReceptiveLanguageModule({ patient, onBack, onSaveAssessm
       category: selectedCategory,
       responses,
       observations,
-      summary: Object.keys(RECEPTIVE_CATEGORIES).reduce((acc, catId) => {
-        const category = RECEPTIVE_CATEGORIES.find(c => c.id === catId);
-        acc[catId] = calculateReceptiveScore(responses, catId);
+      summary: RECEPTIVE_CATEGORIES.reduce((acc, category) => {
+        acc[category.id] = calculateReceptiveScore(responses, category.id);
         return acc;
       }, {}),
     };
@@ -49,19 +46,6 @@ export default function ReceptiveLanguageModule({ patient, onBack, onSaveAssessm
 
     return { total, correct, incorrect };
   };
-
-  // Get age in months from patient for norm comparison
-  const getAgeInMonths = () => {
-    if (!patient.birthDate) return null;
-    const birth = new Date(patient.birthDate);
-    const today = new Date();
-    return Math.floor((today - birth) / (1000 * 60 * 60 * 24 * 30.44));
-  };
-
-  const ageMonths = getAgeInMonths();
-  const ageGroup = ageMonths ? Object.keys(volumaryNorms.receptive).find(key => {
-    return key === key; // Simple age group matcher
-  }) : null;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
