@@ -85,8 +85,10 @@ describe('Fluência Semântica — Evocação Lexical', () => {
       professionalRegistration: 'CRFa 4-12345',
       responsibilityAccepted: true,
     });
-    await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));
-    expect(window.localStorage.getItem(key)).toBeNull();
+    await waitFor(() => {
+      expect(onComplete).toHaveBeenCalledTimes(1);
+      expect(window.localStorage.getItem(key)).toBeNull();
+    });
   });
 
   it('bloqueia finalização sem categoria e instrução', async () => {

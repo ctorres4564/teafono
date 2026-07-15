@@ -95,24 +95,28 @@ export default function VocabularyModule({ patient, onBack, onSaveAssessment }) 
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '400px', overflowY: 'auto' }}>
-        {currentWords.map(word => (
-          <div key={word} className="glass-panel" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        {currentWords.map(wordObj => (
+          <div key={wordObj.id} className="glass-panel" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
-              <img src={`https://placehold.co/150x150?text=${encodeURIComponent(word)}`} alt={word} style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '2px solid var(--border-color)' }} />
-              <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>{word}</div>
+              {wordObj.imageUrl ? (
+                <img src={wordObj.imageUrl} alt={wordObj.target} style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '2px solid var(--border-color)' }} />
+              ) : (
+                <div style={{ width: '100px', height: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', border: '2px solid var(--border-color)', background: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)' }}>Sem figura</div>
+              )}
+              <div style={{ fontWeight: 700, fontSize: '1.1rem' }}>{wordObj.target}</div>
             </div>
             <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
               {VOCABULARY_RESPONSE_TYPES.map(rt => (
                 <button
                   key={rt.id}
-                  className={`score-btn ${responses[word]?.[selectedModality] === rt.id ? 'active-0' : ''}`}
-                  onClick={() => handleResponseChange(word, rt.id)}
+                  className={`score-btn ${responses[wordObj.target]?.[selectedModality] === rt.id ? 'active-0' : ''}`}
+                  onClick={() => handleResponseChange(wordObj.target, rt.id)}
                   style={{
                     padding: '0.35rem 0.5rem',
                     fontSize: '0.7rem',
                     borderColor: rt.color,
-                    color: responses[word]?.[selectedModality] === rt.id ? rt.color : undefined,
-                    background: responses[word]?.[selectedModality] === rt.id ? `${rt.color}20` : undefined,
+                    color: responses[wordObj.target]?.[selectedModality] === rt.id ? rt.color : undefined,
+                    background: responses[wordObj.target]?.[selectedModality] === rt.id ? `${rt.color}20` : undefined,
                   }}
                 >
                   {rt.label}
