@@ -77,7 +77,7 @@ function PragmaticsChart({ history }) {
   );
 }
 
-export default function Dashboard({ patients, onSelectPatient, onAddPatient, onDeletePatient, onUpdatePatient, onImportBackup, onStartAssessment, onViewReport, onGoToCaa, onEditAssessment }) {
+export default function Dashboard({ patients, onSelectPatient, onAddPatient, onDeletePatient, onUpdatePatient, onImportBackup, onStartAssessment, onViewReport, onGoToCaa }) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newName, setNewName] = useState('');
   const [newAge, setNewAge] = useState('');
@@ -200,7 +200,7 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', flexDirection: 'column' }}>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <Search size={16} style={{ position: 'absolute', left: '12px', color: 'var(--text-muted)' }} />
-              <input type="text" placeholder="Buscar por nome ou diagnóstico..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+              <input type="text" placeholder="Buscar por nome ou contexto clínico..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
                 style={{ width: '100%', padding: '0.65rem 0.65rem 0.65rem 2.25rem', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '0.85rem' }} />
             </div>
           </div>
@@ -232,8 +232,8 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
                   </select>
                 </div>
                 <div className="form-group">
-                  <label>Diagnóstico / Nível de Suporte</label>
-                  <input type="text" value={newDiagnosis} onChange={e => setNewDiagnosis(e.target.value)} placeholder="Ex: TEA Nível 1 de Suporte" />
+                  <label>Contexto clínico informado (opcional)</label>
+                  <input type="text" value={newDiagnosis} onChange={e => setNewDiagnosis(e.target.value)} placeholder="Informação registrada pela profissional ou proveniente do prontuário" />
                 </div>
               </div>
               <div className="form-group">
@@ -261,7 +261,7 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
                   <div>
                     <h4 style={{ fontWeight: 700, fontSize: '0.95rem' }}>{p.name}</h4>
                     <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-                      {p.age} anos • {p.gender} • {p.diagnosis || "Sem queixa"}
+                      {p.age} anos • {p.gender} • {p.diagnosis || "Contexto clínico não informado"}
                     </p>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }} onClick={e => e.stopPropagation()}>
@@ -319,7 +319,7 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
                     </select>
                   </div>
                   <div className="form-group">
-                    <label>Diagnóstico</label>
+                    <label>Contexto clínico informado</label>
                     <input type="text" value={editDiagnosis} onChange={e => setEditDiagnosis(e.target.value)} />
                   </div>
                 </div>
@@ -343,7 +343,7 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
                     </button>
                   </div>
                   <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                    <strong>Diagnóstico/Nível:</strong> {selectedPatient.diagnosis || "Não informado"}
+                    <strong>Contexto clínico informado:</strong> {selectedPatient.diagnosis || "Não informado"}
                   </p>
                   {selectedPatient.birthDate && (
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
@@ -358,11 +358,8 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
                 </div>
 
                   <div>
-                    <h5 style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>Avaliações Fonoaudiológicas</h5>
+                    <h5 style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>Módulos de registro e apoio clínico</h5>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                      <button className="btn btn-primary" onClick={() => onStartAssessment('anamnese')} style={{ justifyContent: 'flex-start', background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' }}>
-                        Anamnese Fonoaudiológica
-                      </button>
                       <button className="btn btn-primary" onClick={() => onStartAssessment('mchat')} style={{ justifyContent: 'flex-start', background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' }}>
                         Triagem de Sinais Precoces (M-CHAT-R/F)
                       </button>
@@ -376,7 +373,7 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
                         Avaliação de Vocabulário
                       </button>
                       <button className="btn btn-primary" onClick={() => onStartAssessment('fluency_verbal')} style={{ justifyContent: 'flex-start', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}>
-                        Fluência Verbal
+                        Fluência Semântica — Evocação Lexical
                       </button>
                       <button className="btn btn-primary" onClick={() => onStartAssessment('fluency_speech')} style={{ justifyContent: 'flex-start', background: 'linear-gradient(135deg, #14b8a6 0%, #0d9488 100%)' }}>
                         Fluência da Fala
@@ -419,9 +416,6 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
                               <Calendar size={12} /> {new Date(hist.date).toLocaleDateString('pt-BR')}
                             </span>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.25rem' }}>
-                              {hist.results.anamnese && (
-                                <span onClick={() => onEditAssessment?.('anamnese', hist.id)} className="badge badge-info" style={{ fontSize: '0.65rem', background: '#6366f1', color: '#fff', cursor: 'pointer' }} title="Clique para editar">Anamnese ✎</span>
-                              )}
                               {hist.results.mchat && (
                                 <span className="badge badge-danger" style={{ fontSize: '0.65rem' }}>M-CHAT: {hist.results.mchat.risk}</span>
                               )}
@@ -435,7 +429,9 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
                                 <span className="badge badge-warning" style={{ fontSize: '0.65rem' }}>Vocabulário: {hist.results.vocabulary.summary?.correct || 0} corretas</span>
                               )}
                               {hist.results.fluency_verbal && (
-                                <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>Fluência Verbal: {hist.results.fluency_verbal.summary?.ratePerMinute || 0} pal/min</span>
+                                <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>
+                                  Evocação Lexical: {hist.results.fluency_verbal.objectiveSummary?.validResponses ?? hist.results.fluency_verbal.summary?.uniqueWords ?? 0} válidas
+                                </span>
                               )}
                               {hist.results.fluency_speech && (
                                 <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>Fluência Fala: {hist.results.fluency_speech.summary?.totalDisfluencies || 0} disfluências</span>
@@ -446,7 +442,7 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
                             </div>
                           </div>
                           <button className="btn btn-secondary" onClick={() => onViewReport(hist.id)} style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem' }}>
-                            Laudo
+                            Relatório de apoio
                           </button>
                         </div>
                       ))}

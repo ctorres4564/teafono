@@ -96,7 +96,7 @@ export default function FollowUpPage() {
         <CheckCircle size={48} style={{ color: 'var(--success-color)' }} />
         <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>M-CHAT Concluído</h3>
         <p style={{ color: 'var(--text-secondary)' }}>A Entrevista de Seguimento é recomendada apenas para casos de Médio Risco. Seu paciente foi classificado como <strong>{initialRisk}</strong>.</p>
-        <button className="btn btn-primary" onClick={handleSkipAndSaveDirect} style={{ marginTop: '0.5rem' }}>Ir para o Laudo</button>
+        <button className="btn btn-primary" onClick={handleSkipAndSaveDirect} style={{ marginTop: '0.5rem' }}>Ir para o relatório de apoio</button>
       </div>
     );
   }

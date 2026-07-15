@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Printer, Calendar, Sparkles, FileDown, Brain, Loader } from 'lucide-react';
+import { ArrowLeft, Printer, Calendar, FileDown, Brain, Loader } from 'lucide-react';
 import { generatePts } from '../utils/geminiPtsGenerator';
 
 export default function ReportModule({ patient, assessmentId, therapistSettings, onBack }) {
@@ -33,15 +33,22 @@ export default function ReportModule({ patient, assessmentId, therapistSettings,
       let y = 20;
       const margin = 20;
       const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const ensurePdfSpace = (requiredHeight) => {
+        if (y + requiredHeight > pageHeight - 25) {
+          doc.addPage();
+          y = 20;
+        }
+      };
       
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(18);
-      doc.text('Laudo Fonoaudiologico de TEA', margin, y);
+      doc.text('Relatorio de Apoio Clinico', margin, y);
       y += 10;
       
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
-      doc.text('TeaFono - Avaliacao de Linguagem, Pragmatica e Processamento Alimentar', margin, y);
+      doc.text('TeaFono - Registro estruturado e resumo descritivo', margin, y);
       y += 6;
       doc.text(`Data: ${new Date(date).toLocaleDateString('pt-BR')}`, margin, y);
       y += 12;
@@ -54,7 +61,10 @@ export default function ReportModule({ patient, assessmentId, therapistSettings,
       doc.setFontSize(10);
       doc.text(`Nome: ${patient.name}`, margin, y); y += 6;
       doc.text(`Idade: ${patient.age} anos  |  Genero: ${patient.gender}`, margin, y); y += 6;
-      doc.text(`Diagnostico: ${patient.diagnosis || 'Nao informado'}`, margin, y); y += 10;
+      if (patient.diagnosis) {
+        doc.text(`Informacao clinica registrada pela profissional: ${patient.diagnosis}`, margin, y); y += 6;
+      }
+      doc.text('O TeaFono nao realiza diagnostico ou recomendacao automatica.', margin, y); y += 10;
       
       if (results.mchat) {
         doc.setFont('helvetica', 'bold');
@@ -64,9 +74,7 @@ export default function ReportModule({ patient, assessmentId, therapistSettings,
         doc.setFontSize(10);
         doc.text(`Classificacao: ${results.mchat.risk}  |  Score: ${results.mchat.score}/20`, margin, y); y += 6;
         
-        const mchatLines = doc.splitTextToSize(results.mchat.recommendation || '', pageWidth - margin * 2);
-        doc.text(mchatLines, margin, y);
-        y += mchatLines.length * 5 + 8;
+        doc.text('Resultado do protocolo, sujeito a revisao profissional.', margin, y); y += 8;
       }
       
       if (results.pragmatics) {
@@ -101,10 +109,38 @@ export default function ReportModule({ patient, assessmentId, therapistSettings,
       if (results.fluency_verbal) {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(12);
-        doc.text('5. Fluencia Verbal', margin, y); y += 7;
+        doc.text('5. Fluencia Semantica - Evocacao Lexical', margin, y); y += 7;
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(10);
-        doc.text(`Total palavras: ${results.fluency_verbal.summary?.totalWords || 0}  |  Taxa: ${results.fluency_verbal.summary?.ratePerMinute || 0} pal/min`, margin, y); y += 15;
+        doc.text(
+          `Registros: ${results.fluency_verbal.objectiveSummary?.recordedResponses ?? results.fluency_verbal.summary?.totalWords ?? 0}  |  Validas: ${results.fluency_verbal.objectiveSummary?.validResponses ?? results.fluency_verbal.summary?.uniqueWords ?? 0}`,
+          margin,
+          y
+        ); y += 6;
+        doc.text('Registro autoral de apoio clinico em teste de campo.', margin, y); y += 6;
+
+        const criteria = results.fluency_verbal.clinicalCriteria || [];
+        if (criteria.length > 0) {
+          doc.text('Criterios registrados pela profissional:', margin, y); y += 5;
+          criteria.forEach((criterion, index) => {
+            const lines = doc.splitTextToSize(`${index + 1}. ${criterion.description} | Evidencia: ${criterion.supportingEvidence}`, pageWidth - margin * 2);
+            ensurePdfSpace(lines.length * 5 + 7);
+            doc.text(lines, margin, y);
+            y += lines.length * 5 + 2;
+          });
+        }
+
+        const actions = results.fluency_verbal.plannedActions || [];
+        if (actions.length > 0) {
+          doc.text('Acoes formuladas pela profissional:', margin, y); y += 5;
+          actions.forEach((action, index) => {
+            const lines = doc.splitTextToSize(`${index + 1}. ${action.objective}: ${action.description} | Justificativa: ${action.rationale}`, pageWidth - margin * 2);
+            ensurePdfSpace(lines.length * 5 + 7);
+            doc.text(lines, margin, y);
+            y += lines.length * 5 + 2;
+          });
+        }
+        y += 8;
       }
 
       if (results.fluency_speech) {
@@ -126,7 +162,8 @@ export default function ReportModule({ patient, assessmentId, therapistSettings,
       }
       
       if (therapistSettings?.name || therapistSettings?.crfa) {
-        y = doc.internal.pageSize.getHeight() - 40;
+        if (y > pageHeight - 55) doc.addPage();
+        y = pageHeight - 40;
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(11);
         doc.text('Fonoaudiologo(a) Responsavel', margin, y); y += 7;
@@ -143,20 +180,14 @@ export default function ReportModule({ patient, assessmentId, therapistSettings,
         }
       }
       
-      doc.save(`laudo_${patient.name.replace(/\s+/g, '_')}_${new Date(date).toISOString().slice(0, 10)}.pdf`);
+      doc.save(`registro_apoio_clinico_${patient.name.replace(/\s+/g, '_')}_${new Date(date).toISOString().slice(0, 10)}.pdf`);
     } catch (err) {
       console.error('Erro ao gerar PDF:', err);
       alert('Erro ao gerar PDF. Tente novamente.');
     }
   };
 
-  const handleGeneratePts = () => {
-    // NEW: Show consent modal first
-    setShowConsentModal(true);
-  };
-
   const handleConsentConfirm = async () => {
-    // User confirmed sharing data with Gemini
     setShowConsentModal(false);
     setShowPtsModal(true);
     setPtsLoading(true);
@@ -167,14 +198,8 @@ export default function ReportModule({ patient, assessmentId, therapistSettings,
       const data = await generatePts(patient, results, { useGemini: true });
       setPtsData(data);
     } catch (err) {
-      console.error('Erro ao gerar PTS:', err);
-      setPtsError('Falha ao gerar o Plano Terapêutico. Usando plano offline.');
-      try {
-        const fallback = await generatePts(patient, results, { useGemini: false });
-        setPtsData(fallback);
-      } catch (_fallbackErr) {
-        setPtsError('Não foi possível gerar o PTS. Tente novamente mais tarde.');
-      }
+      console.error('Erro ao gerar apoio com IA:', err);
+      setPtsError('Não foi possível gerar o rascunho de apoio.');
     } finally {
       setPtsLoading(false);
     }
@@ -198,9 +223,6 @@ export default function ReportModule({ patient, assessmentId, therapistSettings,
           <ArrowLeft size={16} /> Voltar ao Painel
         </button>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
-          <button className="btn btn-secondary" onClick={handleGeneratePts} style={{ borderColor: 'var(--warning-color)', color: 'var(--warning-color)' }}>
-            <Brain size={16} /> Gerar PTS com IA
-          </button>
           <button className="btn btn-secondary" onClick={handleExportPdf}>
             <FileDown size={16} /> Exportar PDF
           </button>
@@ -215,10 +237,10 @@ export default function ReportModule({ patient, assessmentId, therapistSettings,
         <div style={{ borderBottom: '2px solid var(--secondary-color)', paddingBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <h1 style={{ fontSize: '1.85rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-primary)' }}>
-              Laudo Fonoaudiológico de TEA
+              Relatório de Apoio Clínico
             </h1>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginTop: '0.25rem' }}>
-              Avaliação de Linguagem, Pragmática e Processamento Alimentar • TeaFono
+              Registro estruturado, resumo descritivo e conteúdo profissional • TeaFono
             </p>
           </div>
           <div style={{ textAlign: 'right' }}>
@@ -226,7 +248,7 @@ export default function ReportModule({ patient, assessmentId, therapistSettings,
               <Calendar size={14} /> Data: {new Date(date).toLocaleDateString('pt-BR')}
             </span>
             <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-              Método: Protocolos Integrados TEA
+              Finalidade: apoio ao registro e à formulação profissional
             </span>
           </div>
         </div>
@@ -250,10 +272,16 @@ export default function ReportModule({ patient, assessmentId, therapistSettings,
             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Gênero</span>
             <div style={{ fontWeight: 600, fontSize: '1.1rem', marginTop: '0.15rem' }}>{patient.gender}</div>
           </div>
-          <div style={{ gridColumn: 'span 2' }}>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Hipótese Diagnóstica</span>
-            <div style={{ fontWeight: 600, fontSize: '1.1rem', marginTop: '0.15rem' }}>{patient.diagnosis || "TEA / Atraso de Linguagem"}</div>
-          </div>
+          {patient.diagnosis && (
+            <div style={{ gridColumn: 'span 2' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Informação clínica registrada pela profissional</span>
+              <div style={{ fontWeight: 600, fontSize: '1.1rem', marginTop: '0.15rem' }}>{patient.diagnosis}</div>
+            </div>
+          )}
+        </div>
+
+        <div style={{ marginBottom: '2rem', padding: '1rem', border: '1px solid #10b981', borderRadius: '10px', color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.5 }}>
+          O TeaFono organiza registros e cálculos descritivos. Não realiza diagnóstico, classificação normativa ou recomendação automática. Critérios, sínteses e ações são de autoria e responsabilidade da profissional identificada.
         </div>
 
         {patient.speechComplaint && (
@@ -285,9 +313,9 @@ export default function ReportModule({ patient, assessmentId, therapistSettings,
                   )}
                 </div>
                 <div>
-                  <p><strong>Direcionamento Clínico e Recomendação:</strong></p>
+                  <p><strong>Registro do protocolo:</strong></p>
                   <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.5rem', lineHeight: '1.5' }}>
-                    {results.mchat.recommendation}
+                    O resultado exibido corresponde ao cálculo do protocolo registrado. A análise do conjunto de informações e qualquer ação decorrente dependem de revisão profissional.
                   </p>
                 </div>
               </div>
@@ -366,9 +394,9 @@ export default function ReportModule({ patient, assessmentId, therapistSettings,
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>Escore: <strong>{results.bambi.score} / 90 pontos</strong></div>
                 </div>
                 <div>
-                  <p><strong>Implicações Fonoaudiológicas Orofaciais:</strong></p>
+                  <p><strong>Observações profissionais:</strong></p>
                   <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.5rem', lineHeight: '1.5' }}>
-                    Comportamentos de recusa ou rigidez alimentar no autismo frequentemente decorrem de hipersensibilidades a texturas, cheiros ou marcas. Indica-se intervenção integrando dessensibilização sistemática intraoral com Terapia Ocupacional e Nutrição, fortalecendo paralelamente a musculatura mastigatória (masseter/temporal) muitas vezes hipotônica devido à restrição a alimentos pastosos/macios.
+                    {results.bambi.observations || 'Nenhuma observação profissional registrada. O TeaFono não formula implicações ou ações automaticamente.'}
                   </p>
                 </div>
               </div>
@@ -403,24 +431,86 @@ export default function ReportModule({ patient, assessmentId, therapistSettings,
           {results.fluency_verbal && (
             <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '2rem' }}>
               <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#10b981', marginBottom: '0.75rem' }}>
-                5. Fluência Verbal
+                5. Fluência Semântica — Evocação Lexical
               </h3>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginTop: '0.5rem' }}>
                 <div style={{ padding: '1.25rem', background: 'rgba(255,255,255,0.01)', borderRadius: '12px', border: '1px solid var(--border-color)', textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Indicadores</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Resultado descritivo</div>
                   <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#10b981', marginTop: '0.25rem' }}>
-                    {results.fluency_verbal.summary?.ratePerMinute || 0} palavras/min
+                    {results.fluency_verbal.objectiveSummary?.validResponses ?? results.fluency_verbal.summary?.uniqueWords ?? 0} respostas válidas
                   </div>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
-                    Total: {results.fluency_verbal.summary?.totalWords || 0} | Únicas: {results.fluency_verbal.summary?.uniqueWords || 0}
+                    Registros: {results.fluency_verbal.objectiveSummary?.recordedResponses ?? results.fluency_verbal.summary?.totalWords ?? 0}
+                    {' | '}Repetições: {results.fluency_verbal.objectiveSummary?.byClassification?.repetition ?? results.fluency_verbal.counts?.repetitions ?? 0}
                   </div>
                 </div>
                 <div>
                   <p><strong>Observações:</strong></p>
                   <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.5rem', lineHeight: '1.5' }}>
-                    {results.fluency_verbal.notes || 'Nenhuma observação registrada.'}
+                    {results.fluency_verbal.clinicalNotes || results.fluency_verbal.notes || 'Nenhuma observação registrada.'}
+                  </p>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '0.75rem', lineHeight: '1.5' }}>
+                    <strong>Categoria:</strong> {results.fluency_verbal.context?.category || 'Não informada'}<br />
+                    <strong>Instrução registrada:</strong> {results.fluency_verbal.context?.instruction || 'Não informada'}
+                  </p>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.75rem' }}>
+                    Registro autoral de apoio clínico em teste de campo. O sistema não realizou interpretação normativa, diagnóstico ou recomendação automática.
                   </p>
                 </div>
+              </div>
+
+              <div style={{ marginTop: '1.25rem', display: 'grid', gap: '1rem' }}>
+                <div>
+                  <h4 style={{ fontSize: '0.9rem', fontWeight: 700 }}>Critérios clínicos registrados pela profissional</h4>
+                  {(results.fluency_verbal.clinicalCriteria || []).length === 0 ? (
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.4rem' }}>Nenhum critério registrado.</p>
+                  ) : (
+                    <ol style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', paddingLeft: '1.25rem', marginTop: '0.5rem', display: 'grid', gap: '0.6rem' }}>
+                      {results.fluency_verbal.clinicalCriteria.map(criterion => (
+                        <li key={criterion.id}>
+                          <strong>{criterion.description}</strong><br />
+                          Evidência: {criterion.supportingEvidence}
+                          {criterion.source ? <><br />Fonte informada: {criterion.source}</> : null}
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+                </div>
+
+                <div>
+                  <h4 style={{ fontSize: '0.9rem', fontWeight: 700 }}>Síntese clínica da profissional</h4>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '0.4rem', whiteSpace: 'pre-wrap' }}>
+                    {results.fluency_verbal.clinicalSynthesis || 'Nenhuma síntese profissional registrada.'}
+                  </p>
+                </div>
+
+                <div>
+                  <h4 style={{ fontSize: '0.9rem', fontWeight: 700 }}>Ações formuladas pela profissional</h4>
+                  {(results.fluency_verbal.plannedActions || []).length === 0 ? (
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.4rem' }}>Nenhuma ação profissional registrada.</p>
+                  ) : (
+                    <ol style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', paddingLeft: '1.25rem', marginTop: '0.5rem', display: 'grid', gap: '0.6rem' }}>
+                      {results.fluency_verbal.plannedActions.map(action => (
+                        <li key={action.id}>
+                          <strong>{action.objective}</strong>: {action.description}<br />
+                          Justificativa: {action.rationale}
+                          {action.timeframe ? <><br />Prazo ou frequência: {action.timeframe}</> : null}
+                          {action.followUpIndicator ? <><br />Indicador: {action.followUpIndicator}</> : null}
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+                </div>
+
+                {results.fluency_verbal.professionalReview?.responsibilityAccepted && (
+                  <div style={{ padding: '0.8rem', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+                    Revisado por <strong>{results.fluency_verbal.professionalReview.professionalName}</strong>
+                    {' · '}{results.fluency_verbal.professionalReview.professionalRegistration}
+                    {results.fluency_verbal.professionalReview.reviewedAt
+                      ? ` · ${new Date(results.fluency_verbal.professionalReview.reviewedAt).toLocaleString('pt-BR')}`
+                      : ''}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -474,33 +564,6 @@ export default function ReportModule({ patient, assessmentId, therapistSettings,
               </div>
             </div>
           )}
-
-          <div>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Sparkles size={18} className="text-primary" /> Orientações e Condutas Recomendadas
-            </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginTop: '0.5rem' }}>
-              <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.01)', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
-                <strong style={{ fontSize: '0.9rem', color: 'var(--primary-color)' }}>Estratégias para Sala de Aula:</strong>
-                <ul style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', paddingLeft: '1.25rem', marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <li>Uso de rotinas visuais e quadros de atividades em imagens claras (PECS).</li>
-                  <li>Evitar comandos verbais longos. Dividir tarefas em passos únicos.</li>
-                  <li>Oferecer abafadores de ouvido caso a criança apresente reações a ruídos.</li>
-                  <li>Permitir o uso de prancha de Comunicação Alternativa (CAA) digital.</li>
-                </ul>
-              </div>
-              
-              <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.01)', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
-                <strong style={{ fontSize: '0.9rem', color: 'var(--secondary-color)' }}>Estratégias para Estimulação Domiciliar:</strong>
-                <ul style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', paddingLeft: '1.25rem', marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <li>Narrar em voz alta ações simples do dia a dia da criança, fornecendo modelos.</li>
-                  <li>Posicionar-se sempre na altura dos olhos da criança ao dar comandos verbais.</li>
-                  <li>Na seletividade, expor alimentos novos sem pressionar a criança a comê-los inicialmente (estimulação tátil e olfativa livre).</li>
-                  <li>Dedicar 15 minutos diários de brincadeira guiada pela criança (modelo Denver).</li>
-                </ul>
-              </div>
-            </div>
-          </div>
 
         </div>
 

@@ -19,14 +19,17 @@ export default function DashboardPage() {
     const active = useStore.getState().getActivePatient();
     if (!active) return;
 
+    if (moduleName === 'fluency_verbal' || moduleName === 'fluency_speech') {
+      const mode = moduleName === 'fluency_verbal' ? 'verbal' : 'speech';
+      navigate(`/fluency/${active.id}/${mode}`);
+      return;
+    }
+
     const routeMap = {
-      anamnese: 'anamnese',
       mchat: 'mchat',
       pragmatics: 'pragmatics',
       bambi: 'bambi',
       vocabulary: 'vocabulary',
-      fluency_verbal: 'fluency/verbal',
-      fluency_speech: 'fluency/speech',
       phonology: 'phonology',
       voice: 'voice',
       receptive_language: 'receptive_language',
@@ -37,8 +40,6 @@ export default function DashboardPage() {
     const route = routeMap[moduleName];
     if (route) {
       navigate(`/${route}/${active.id}`);
-    } else {
-      navigate(`/${moduleName}/${active.id}`);
     }
   };
 
@@ -56,12 +57,6 @@ export default function DashboardPage() {
     navigate(`/caa/${active.id}`);
   };
 
-  const handleEditAssessment = (moduleName, entryId) => {
-    const active = useStore.getState().getActivePatient();
-    if (!active) return;
-    navigate(`/${moduleName}/${active.id}/${entryId}`);
-  };
-
   return (
     <Dashboard
       patients={patients}
@@ -74,7 +69,6 @@ export default function DashboardPage() {
       onStartAssessment={handleStartAssessment}
       onViewReport={handleViewReport}
       onGoToCaa={handleGoToCaa}
-      onEditAssessment={handleEditAssessment}
     />
   );
 }
