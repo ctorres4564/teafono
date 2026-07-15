@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import AssessmentHeader from './shared/AssessmentHeader';
+import { calculateTTR, interpretTTR } from '../utils/developmentalNorms';
 import {
   VOCABULARY_CATEGORIES,
   VOCABULARY_MODALITIES,
   VOCABULARY_RESPONSE_TYPES,
 } from '../store/assessments/items/vocabularyItems';
+import { TrendingUp } from 'lucide-react';
 
 export default function VocabularyModule({ patient, onBack, onSaveAssessment }) {
   const [selectedModality, setSelectedModality] = useState(VOCABULARY_MODALITIES[0].id);
@@ -42,7 +44,17 @@ export default function VocabularyModule({ patient, onBack, onSaveAssessment }) 
     ).length;
     const noResponse = modalityResponses.filter(r => r === 'no_response').length;
 
-    return { total, correct, substitutions, noResponse };
+    // Calculate TTR: unique correct responses / total responses
+    const uniqueCorrect = new Set(
+      Object.entries(responses)
+        .filter(([_, r]) => r[selectedModality] === 'correct')
+        .map(([word, _]) => word)
+    ).size;
+
+    const ttr = total > 0 ? calculateTTR(total, uniqueCorrect) : 0;
+    const ttrInterpretation = interpretTTR(parseFloat(ttr));
+
+    return { total, correct, substitutions, noResponse, ttr, ttrInterpretation, uniqueCorrect };
   };
 
   return (
@@ -118,6 +130,39 @@ export default function VocabularyModule({ patient, onBack, onSaveAssessment }) 
           style={{ width: '100%', padding: '0.65rem 0.8rem', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '0.9rem', resize: 'vertical', fontFamily: 'var(--font-family)' }}
         />
       </div>
+
+      {(() => {
+        const summary = generateSummary();
+        return summary.total > 0 && (
+          <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <TrendingUp size={18} style={{ color: 'var(--primary-color)' }} />
+              <h4 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>Análise de Diversidade Lexical (TTR)</h4>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+              <div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Taxa de Diversidade Lexical</div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--primary-color)' }}>
+                  {summary.ttr}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Palavras Únicas / Total</div>
+                <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  {summary.uniqueCorrect} de {summary.total}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ padding: '0.75rem', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '6px', borderLeft: '3px solid rgb(59, 130, 246)' }}>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-primary)', fontWeight: 600 }}>
+                {summary.ttrInterpretation}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>

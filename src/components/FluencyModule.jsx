@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import AssessmentHeader from './shared/AssessmentHeader';
 import AssessmentTimer from './shared/AssessmentTimer';
 import AssessmentSummary from './shared/AssessmentSummary';
+import { fluencyNorms } from '../utils/developmentalNorms';
 import { FLUENCY_VERBAL_CATEGORIES, FLUENCY_SPEECH_DISFLUENCIES, FLUENCY_TRANSCRIPTION_FIELDS } from '../store/assessments/items/fluencyItems';
+import { AlertCircle, CheckCircle, TrendingDown } from 'lucide-react';
 
 export default function FluencyModule({ patient, onBack, onSaveAssessment, mode = 'verbal' }) {
   const isVerbal = mode === 'verbal';
@@ -56,6 +58,48 @@ export default function FluencyModule({ patient, onBack, onSaveAssessment, mode 
   const totalCount = Object.values(counts).reduce((a, b) => a + b, 0);
   const durationMin = elapsedSeconds > 0 ? elapsedSeconds / 60 : 0;
   const rate = durationMin > 0 && totalCount > 0 ? (totalCount / durationMin).toFixed(1) : 0;
+
+  // Get age in months and determine appropriate norms
+  const getAgeInMonths = () => {
+    if (!patient.birthDate) return null;
+    const birth = new Date(patient.birthDate);
+    const today = new Date();
+    return Math.floor((today - birth) / (1000 * 60 * 60 * 24 * 30.44));
+  };
+
+  const ageMonths = getAgeInMonths();
+  const getAgeGroup = () => {
+    if (!ageMonths) return 'adult';
+    if (ageMonths < 24) return '24-36';
+    if (ageMonths < 37) return '24-36';
+    if (ageMonths < 49) return '37-48';
+    if (ageMonths < 60) return '49-60';
+    return 'adult';
+  };
+  const ageGroup = getAgeGroup();
+
+  // Calculate fluency comparison for verbal mode
+  const fluencyComparison = isVerbal && totalCount > 0
+    ? (() => {
+        const norm = fluencyNorms.speech_rate[ageGroup];
+        const speechRate = parseFloat(rate);
+        let severity = 0;
+        let classification = 'Dentro do esperado';
+
+        if (speechRate < norm.min) {
+          severity = 2;
+          classification = 'Redução de velocidade';
+        } else if (speechRate >= norm.expected) {
+          severity = 0;
+          classification = 'Dentro do esperado';
+        } else if (speechRate >= (norm.min + norm.expected) / 2) {
+          severity = 1;
+          classification = 'Levemente reduzida';
+        }
+
+        return { classification, severity, norm, speechRate };
+      })()
+    : null;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -150,6 +194,23 @@ export default function FluencyModule({ patient, onBack, onSaveAssessment, mode 
           ...(totalCount > 0 ? [{ label: isVerbal ? 'Palavras/min' : 'Descontinuidades/min', value: `${rate}`, highlight: true }] : []),
         ]}
       >
+        {/* Developmental Comparison for Verbal Fluency */}
+        {fluencyComparison && (
+          <div style={{ marginTop: '1rem', padding: '1rem', borderRadius: '8px', background: fluencyComparison.severity === 0 ? 'rgba(16, 185, 129, 0.1)' : fluencyComparison.severity === 1 ? 'rgba(251, 191, 36, 0.1)' : 'rgba(239, 68, 68, 0.1)', borderLeft: `4px solid ${fluencyComparison.severity === 0 ? 'rgb(16, 185, 129)' : fluencyComparison.severity === 1 ? 'rgb(251, 191, 36)' : 'rgb(239, 68, 68)'}` }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+              {fluencyComparison.severity === 0 && <CheckCircle size={16} style={{ color: 'rgb(16, 185, 129)' }} />}
+              {fluencyComparison.severity === 1 && <AlertCircle size={16} style={{ color: 'rgb(251, 191, 36)' }} />}
+              {fluencyComparison.severity >= 2 && <TrendingDown size={16} style={{ color: 'rgb(239, 68, 68)' }} />}
+              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: fluencyComparison.severity === 0 ? 'rgb(16, 185, 129)' : fluencyComparison.severity === 1 ? 'rgb(251, 191, 36)' : 'rgb(239, 68, 68)' }}>
+                {fluencyComparison.classification}
+              </span>
+            </div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+              <strong>Esperado para {ageGroup} meses:</strong> {fluencyComparison.norm.min}-{fluencyComparison.norm.max} palavras/min
+            </div>
+          </div>
+        )}
+
         <button className="btn btn-primary" onClick={handleSave} style={{ marginTop: '0.5rem', height: '44px' }}>
           Finalizar e Salvar {isVerbal ? 'Fluência Verbal' : 'Fluência da Fala'}
         </button>

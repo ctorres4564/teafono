@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import AssessmentHeader from './shared/AssessmentHeader';
 import AssessmentSummary from './shared/AssessmentSummary';
+import { interpretPCCR, phonologyNorms } from '../utils/developmentalNorms';
 import { PHONOLOGY_WORDS, PHONOLOGY_CONSONANTS, calculatePCCR } from '../store/assessments/items/phonologyItems';
+import { AlertCircle, CheckCircle, TrendingDown, TrendingUp } from 'lucide-react';
 
 const PRODUCTION_OPTIONS = [
   { id: 'correct', label: 'Correta', color: 'var(--success-color)' },
@@ -46,6 +48,24 @@ export default function PhonologyModule({ patient, onBack, onSaveAssessment }) {
   };
 
   const allFilled = productions.every(p => p.transcription.trim());
+
+  // Get age in months from patient for norm comparison
+  const getAgeInMonths = () => {
+    if (!patient.birthDate) return null;
+    const birth = new Date(patient.birthDate);
+    const today = new Date();
+    return Math.floor((today - birth) / (1000 * 60 * 60 * 24 * 30.44));
+  };
+
+  const ageMonths = getAgeInMonths();
+  const ageGroup = ageMonths ? Object.keys(phonologyNorms).find(key => {
+    const [min, max] = key.split('-').map(Number);
+    return ageMonths >= min && ageMonths <= max;
+  }) : null;
+
+  const developmentalComparison = allFilled && ageGroup
+    ? interpretPCCR(calculatePCCR(productions).percentage, ageMonths)
+    : null;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -153,9 +173,28 @@ export default function PhonologyModule({ patient, onBack, onSaveAssessment }) {
         {allFilled && (() => {
           const pccr = calculatePCCR(productions);
           return (
-            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', padding: '0.5rem', background: 'rgba(139,92,246,0.05)', borderRadius: '8px' }}>
-              <strong>Classificação:</strong> {pccr.classification} ({pccr.correct}/{pccr.total} consoantes corretas)
-            </div>
+            <>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', padding: '0.5rem', background: 'rgba(139,92,246,0.05)', borderRadius: '8px' }}>
+                <strong>Classificação:</strong> {pccr.classification} ({pccr.correct}/{pccr.total} consoantes corretas)
+              </div>
+
+              {/* Developmental Comparison */}
+              {developmentalComparison && ageGroup && (
+                <div style={{ marginTop: '1rem', padding: '1rem', borderRadius: '8px', background: developmentalComparison.severity === 0 ? 'rgba(16, 185, 129, 0.1)' : developmentalComparison.severity === 1 ? 'rgba(251, 191, 36, 0.1)' : 'rgba(239, 68, 68, 0.1)', borderLeft: `4px solid ${developmentalComparison.severity === 0 ? 'rgb(16, 185, 129)' : developmentalComparison.severity === 1 ? 'rgb(251, 191, 36)' : 'rgb(239, 68, 68)'}` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                    {developmentalComparison.severity === 0 && <CheckCircle size={16} style={{ color: 'rgb(16, 185, 129)' }} />}
+                    {developmentalComparison.severity === 1 && <AlertCircle size={16} style={{ color: 'rgb(251, 191, 36)' }} />}
+                    {developmentalComparison.severity >= 2 && <TrendingDown size={16} style={{ color: 'rgb(239, 68, 68)' }} />}
+                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: developmentalComparison.severity === 0 ? 'rgb(16, 185, 129)' : developmentalComparison.severity === 1 ? 'rgb(251, 191, 36)' : 'rgb(239, 68, 68)' }}>
+                      {developmentalComparison.classification}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    <strong>Esperado para {ageGroup} meses:</strong> {phonologyNorms[ageGroup].pcc_r_range.min}-{phonologyNorms[ageGroup].pcc_r_range.max}% PCC-R
+                  </div>
+                </div>
+              )}
+            </>
           );
         })()}
         <button className="btn btn-primary" onClick={handleSave} style={{ marginTop: '0.5rem', height: '44px' }} disabled={!allFilled}>
