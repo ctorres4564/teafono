@@ -7,10 +7,30 @@
  */
 
 /**
+ * Returns a per-device guest key id, persisted in localStorage.
+ * Used to derive a stable encryption key for guest (unauthenticated) mode so
+ * that sensitive data is never stored in plaintext.
+ *
+ * @returns {string} Guest key identifier
+ */
+function getGuestKeyId() {
+  const storageKey = 'teafono_guest_kid';
+  let keyId = localStorage.getItem(storageKey);
+  if (!keyId) {
+    const raw = (typeof crypto !== 'undefined' && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : 'g_' + Date.now() + '_' + Math.random().toString(16).slice(2);
+    keyId = raw;
+    localStorage.setItem(storageKey, keyId);
+  }
+  return 'guest_' + keyId;
+}
+
+/**
  * Derive an encryption key from a user ID using PBKDF2
  * Makes the key unique per user without storing a master key
  *
- * @param {string} userId - Firebase user ID (UID)
+ * @param {string} userId - Firebase user ID (UID) or guest key id
  * @returns {Promise<CryptoKey>} Derived encryption key
  */
 async function deriveKey(userId) {
@@ -43,17 +63,15 @@ async function deriveKey(userId) {
  * Uses AES-256-GCM with a random IV
  *
  * @param {any} data - Data to encrypt (will be JSON stringified)
- * @param {string} userId - User ID for key derivation
+ * @param {string} userId - User ID for key derivation (guest mode uses a device key)
  * @returns {Promise<string>} Base64-encoded encrypted data with IV
  */
 export async function encryptData(data, userId) {
   try {
-    if (!userId) {
-      console.warn('[encryption] No user ID provided, returning plaintext');
-      return JSON.stringify(data); // Fallback for guest mode
-    }
+    // Guest mode uses a persistent per-device key instead of plaintext.
+    const effectiveUserId = userId || getGuestKeyId();
 
-    const key = await deriveKey(userId);
+    const key = await deriveKey(effectiveUserId);
     const plaintext = new TextEncoder().encode(JSON.stringify(data));
     const iv = window.crypto.getRandomValues(new Uint8Array(12)); // 96-bit IV for GCM
 
@@ -85,24 +103,30 @@ export async function encryptData(data, userId) {
  */
 export async function decryptData(encrypted, userId) {
   try {
-    if (!userId) {
-      console.warn('[encryption] No user ID provided, treating as plaintext');
-      return JSON.parse(encrypted); // Fallback for guest mode
-    }
+    // Guest mode uses a persistent per-device key.
+    const effectiveUserId = userId || getGuestKeyId();
 
-    const key = await deriveKey(userId);
+    const key = await deriveKey(effectiveUserId);
     const combined = new Uint8Array(atob(encrypted).split('').map(c => c.charCodeAt(0)));
 
     const iv = combined.slice(0, 12);
     const ciphertext = combined.slice(12);
 
-    const plaintext = await window.crypto.subtle.decrypt(
-      { name: 'AES-GCM', iv: iv },
-      key,
-      ciphertext
-    );
-
-    return JSON.parse(new TextDecoder().decode(plaintext));
+    try {
+      const plaintext = await window.crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: iv },
+        key,
+        ciphertext
+      );
+      return JSON.parse(new TextDecoder().decode(plaintext));
+    } catch (decryptError) {
+      // Fallback for legacy plaintext data stored before guest-mode encryption.
+      try {
+        return JSON.parse(encrypted);
+      } catch {
+        throw decryptError;
+      }
+    }
   } catch (error) {
     console.error('[encryption] Decryption failed:', error);
     throw error;

@@ -93,6 +93,20 @@ export async function savePatientToFirestore(patient, userId) {
   }
 }
 
+export async function saveLogToFirestore(logEntry, userId) {
+  if (!db || !userId) return { success: false, error: 'Firestore não disponível ou userId ausente' };
+  try {
+    const logRef = doc(collection(db, 'users', userId, 'logs'));
+    const cleaned = removeUndefined(logEntry);
+    await setDoc(logRef, cleaned);
+    return { success: true };
+  } catch (err) {
+    console.error("[Firestore] Erro ao salvar log:", err.code, err.message);
+    return { success: false, error: err.message, code: err.code };
+  }
+}
+
+
 export async function deletePatientFromFirestore(patientId, userId) {
   if (!db || !userId) return { success: false, error: 'Firestore não disponível' };
   try {

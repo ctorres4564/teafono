@@ -1,4 +1,7 @@
 // Gemini API utilities for TeaFono
+import { auth } from '../firebase';
+import { anonimizePatientData } from './privacyUtils';
+
 export class GeminiApiError extends Error {
   constructor(message, status, retryAfter) {
     super(message);
@@ -45,11 +48,28 @@ export async function generateOfflinePlan(patient, assessments) {
 }
 
 export async function callGeminiApi(patient, assessments) {
+  // O backend exige token de autenticação Firebase; sem usuário autenticado,
+  // a IA online é indisponível (modo convidado usa fallback offline).
+  const user = auth?.currentUser;
+  if (!user) {
+    throw new GeminiApiError(
+      'Usuário não autenticado — IA online indisponível no modo convidado',
+      401
+    );
+  }
+  const idToken = await user.getIdToken();
+
+  // Enviar SOMENTE dados anonimizados (LGPD) — nunca o objeto patient completo.
+  const anonPatient = await anonimizePatientData(patient);
+
   try {
     const response = await fetch('/api/generate-pts', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ patient, assessments })
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${idToken}`,
+      },
+      body: JSON.stringify({ patient: anonPatient, assessments })
     });
 
     if (!response.ok) {

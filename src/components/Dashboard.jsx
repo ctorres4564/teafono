@@ -360,6 +360,9 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
                   <div>
                     <h5 style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>Módulos de registro e apoio clínico</h5>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <button className="btn btn-primary" onClick={() => onStartAssessment('anamnese')} style={{ justifyContent: 'flex-start', background: 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)' }}>
+                        📝 Anamnese Fonoaudiológica Completa
+                      </button>
                       <button className="btn btn-primary" onClick={() => onStartAssessment('mchat')} style={{ justifyContent: 'flex-start', background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' }}>
                         Triagem de Sinais Precoces (M-CHAT-R/F)
                       </button>
@@ -415,6 +418,9 @@ export default function Dashboard({ patients, onSelectPatient, onAddPatient, onD
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.25rem' }}>
                               {hist.results.mchat && (
                                 <span className="badge badge-danger" style={{ fontSize: '0.65rem' }}>M-CHAT: {hist.results.mchat.risk}</span>
+                              )}
+                              {hist.results.anamnese && (
+                                <span className="badge badge-info" style={{ fontSize: '0.65rem' }}>Anamnese</span>
                               )}
                               {hist.results.pragmatics && (
                                 <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>Pragmática: {hist.results.pragmatics.ratePerMinute} atos/min</span>

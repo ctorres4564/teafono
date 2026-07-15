@@ -46,12 +46,28 @@ async function verifyFirebaseToken(token) {
   }
 }
 
+// Campos de PII proibidos no payload (defesa em profundidade — o cliente já anonimiza)
+const FORBIDDEN_PII = [
+  'name', 'birthDate', 'birthdate', 'cpf', 'rg', 'phone', 'email', 'address',
+  'street', 'city', 'zip', 'cep', 'mother', 'father', 'guardian', 'crm', 'crf',
+];
+
+// Hash SHA-256 (Node crypto) — consistente com o cliente (Web Crypto SHA-256).
+// Usado apenas como normalização/validação; o cliente já envia patientHash.
+const { createHash } = require('crypto');
+function hashUID(uid) {
+  return 'pat_' + createHash('sha256')
+    .update(uid + '_teafono_pepper_v1')
+    .digest('hex')
+    .substring(0, 24);
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // NEW: Validate Firebase token for authentication
+  // Validate Firebase token for authentication
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Unauthorized: missing token' });
@@ -66,7 +82,7 @@ export default async function handler(req, res) {
 
   const userId = decodedToken.uid;
 
-  // NEW: Check rate limit for this user
+  // Check rate limit for this user
   if (isRateLimited(userId)) {
     return res.status(429).json({
       error: 'Rate limit exceeded: maximum 5 requests per minute',
@@ -85,25 +101,29 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing patient or assessments' });
     }
 
-    // NEW: Anonymize patient data before sending to external API (LGPD/GDPR compliance)
-    // Hash patient identifier - cannot be reversed to identify the child
-    function hashUID(uid) {
-      let hash = 0;
-      for (let i = 0; i < uid.length; i++) {
-        const char = uid.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash;
-      }
-      return 'pat_' + Math.abs(hash).toString(16).padStart(16, '0');
+    // Defesa em profundidade: rejeitar qualquer PII que o cliente possa ter
+    // enviado por engano. Apenas dados anonimizados são aceitos.
+    const receivedFields = Object.keys(patient).map((k) => k.toLowerCase());
+    const piiFound = FORBIDDEN_PII.filter((f) => receivedFields.includes(f.toLowerCase()));
+    if (piiFound.length > 0) {
+      return res.status(400).json({
+        error: `Payload contém PII proibida: ${piiFound.join(', ')}. Envie apenas dados anonimizados.`,
+      });
     }
 
-    const patientHash = hashUID(patient.id);
+    // Validação de formato básica dos dados anonimizados
+    if (typeof patient.ageYears !== 'number' || typeof (patient.patientHash || patient.id) !== 'string') {
+      return res.status(400).json({ error: 'Formato de paciente inválido' });
+    }
+
+    // Usa o hash já enviado pelo cliente; normaliza com SHA-256 se ausente.
+    const patientHash = patient.patientHash || hashUID(patient.id);
 
     const prompt = `Você é uma fonoaudióloga especialista em TEA com vasta experiência clínica em plano de intervenção fonoaudiológica personalizado para autismo. Crie um plano de intervenção personalizado e detalhado baseado nos dados abaixo:
 
 **Dados Clínicos (Anônimos - LGPD Compliant):**
 - Paciente ID (hash): ${patientHash}
-- Idade: ${patient.age} anos
+- Idade: ${patient.ageYears} anos
 - Gênero: ${patient.gender}
 - Queixa Fonoaudiológica: ${patient.speechComplaint}
 
@@ -114,7 +134,7 @@ export default async function handler(req, res) {
 
 **Tarefas:**
 1. Forneça um plano de intervenção fonoaudiológica personalizado com objetivos específicos, frequência e técnicas
-2. Ofereça estratégias motoras orais específicas para habilidades de fala 
+2. Ofereça estratégias motoras orais específicas para habilidades de fala
 3. Inclua diretrizes de manejo alimentar específicas
 4. Forneça uma lista de verificação de marcos de acompanhamento
 

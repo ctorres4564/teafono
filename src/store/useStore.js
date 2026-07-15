@@ -1,4 +1,6 @@
 import { debugLog } from '../utils/debug';
+import { sanitizeObject, validateAnamneseForm } from '../utils/securityUtils';
+import { logInfo, logWarn, logError, flushOfflineLogs } from '../utils/logger';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { mockTeaPatients } from '../utils/teaEvaluations';
@@ -149,6 +151,7 @@ const useStore = create(
         const updated = [newPat, ...get().patients.map((p) => ({ ...p, isSelected: false }))];
         set({ activePatientId: newPat.id });
         get().persistPatients(updated);
+        logInfo('Ficha de paciente infantil cadastrada', { patientId: newPat.id });
       },
 
       deletePatient: (id) => {
@@ -159,6 +162,7 @@ const useStore = create(
           set({ activePatientId: null });
         }
         get().persistPatients(updated);
+        logInfo('Ficha de paciente excluída', { patientId: id });
         if (isFirebaseEnabled() && currentUser) {
           deletePatientFromFirestore(id, currentUser.uid);
         }
@@ -180,6 +184,7 @@ const useStore = create(
           return p;
         });
         get().persistPatients(updated);
+        logInfo('Dados cadastrais do paciente atualizados', { patientId: updatedPatData.id });
       },
 
       importBackupList: (importedList) => {
@@ -201,10 +206,26 @@ const useStore = create(
       saveAssessmentResults: async (moduleName, results, entryId, patientId) => {
         const { patients, activePatientId } = get();
         const pid = patientId || activePatientId;
-        debugLog(`[saveAssessmentResults] iniciando: moduleName=${moduleName}, pid=${pid}, entryId=${entryId}, patients.length=${patients.length}`);
-        if (!pid) { console.error('[saveAssessmentResults] Nenhum patientId disponível'); return { success: false, error: 'Nenhum patientId' }; }
+        logInfo('Iniciando salvamento de avaliação', { moduleName, patientId: pid, entryId });
+        
+        if (!pid) {
+          logError('Falha ao salvar avaliação: patientId ausente', new Error('Nenhum patientId'));
+          return { success: false, error: 'Nenhum patientId' };
+        }
         const patientIdx = patients.findIndex((p) => p.id === pid);
-        if (patientIdx === -1) { console.error('[saveAssessmentResults] Paciente não encontrado:', pid); return { success: false, error: 'Paciente não encontrado' }; }
+        if (patientIdx === -1) {
+          logError('Falha ao salvar avaliação: paciente não encontrado', new Error('Paciente não encontrado'), { patientId: pid });
+          return { success: false, error: 'Paciente não encontrado' };
+        }
+
+        // Validação de segurança específica para Anamnese
+        if (moduleName === 'anamnese') {
+          const validation = validateAnamneseForm(results);
+          if (!validation.valid) {
+            logWarn('Validação de segurança da anamnese falhou', { error: validation.error, patientId: pid });
+            return { success: false, error: validation.error };
+          }
+        }
 
         let patientCopy;
         try {
@@ -224,6 +245,9 @@ const useStore = create(
           console.error('[saveAssessmentResults] Erro ao clonar results:', e);
           resultsCopy = { ...results };
         }
+
+        // Sanitização Anti-XSS para segurança dos dados salvos no banco de dados e renderizados no front
+        resultsCopy = sanitizeObject(resultsCopy);
 
         const evalId = entryId || generateAssessmentId();
 
@@ -271,12 +295,13 @@ const useStore = create(
             console.error('[saveAssessmentResults] Erro ao verificar localStorage:', parseErr);
           }
         }
-        debugLog(`[saveAssessmentResults] ${moduleName} salvo para paciente ${pid} (entry: ${evalId}) - localStorage verificado: ${savedOk}`);
 
         if (!savedOk) {
-          console.error(`[saveAssessmentResults] Persistência local FALHOU para ${pid}`);
+          logError('Persistência local de avaliação falhou', new Error('Falha de escrita no localStorage'), { moduleName, patientId: pid });
           return { success: false, error: 'Falha ao salvar localmente', entryId: evalId };
         }
+
+        logInfo('Avaliação salva localmente com sucesso', { moduleName, patientId: pid, entryId: evalId });
 
         const { currentUser } = get();
         if (!currentUser || !isFirebaseEnabled()) {
@@ -285,9 +310,9 @@ const useStore = create(
 
         const firestoreResult = await get().syncPatientsToFirestore([patientCopy]);
         if (firestoreResult.success) {
-          debugLog(`[saveAssessmentResults] Firestore confirmado para ${pid}`);
+          logInfo('Avaliação sincronizada com a nuvem', { moduleName, patientId: pid, entryId: evalId });
         } else {
-          console.error(`[saveAssessmentResults] Firestore FALHOU para ${pid} - dados mantidos localmente`);
+          logWarn('Falha na sincronização de avaliação com a nuvem (mantida localmente)', { moduleName, patientId: pid, entryId: evalId });
         }
         return { success: true, entryId: evalId, cloudSynced: firestoreResult.success };
       },
@@ -305,8 +330,9 @@ const useStore = create(
         if (isFirebaseEnabled()) {
           try {
             await signOut(auth);
+            logInfo('Usuário realizou logout manual');
           } catch (err) {
-            console.error('Erro ao deslogar:', err);
+            logError('Erro ao deslogar', err);
           }
         }
         set({
@@ -327,14 +353,17 @@ const useStore = create(
           set({ authLoading: true });
           if (user) {
             set({ currentUser: user, isGuestMode: false });
-            debugLog('[initAuth] Usuário autenticado:', user.uid);
+            logInfo('Usuário autenticado no sistema', { uid: user.uid });
+            
+            // Tenta enviar logs salvos offline para o Firestore
+            flushOfflineLogs(user.uid);
 
             let firestoreList = [];
             let firestoreError = false;
             try {
               firestoreList = await loadPatientsFromFirestore(user.uid);
             } catch (err) {
-              console.error('[initAuth] Erro ao carregar do Firestore:', err);
+              logError('Erro ao carregar pacientes do Firestore', err);
               firestoreError = true;
             }
 
@@ -350,26 +379,26 @@ const useStore = create(
             }
 
             const result = await mergePatients({
-                firestoreList,
-                firestoreError,
-                userLocalRaw,
-                guestLocalRaw,
-                syncPatientsToFirestore: get().syncPatientsToFirestore,
-                loadAndVerifyFirestore: get().loadAndVerifyFirestore,
-              });
+              firestoreList,
+              firestoreError,
+              userLocalRaw,
+              guestLocalRaw,
+              syncPatientsToFirestore: get().syncPatientsToFirestore,
+              loadAndVerifyFirestore: get().loadAndVerifyFirestore,
+            });
 
-              if (result.patients.length > 0) {
-                set({ patients: result.patients });
-                localStorage.setItem(userKey, JSON.stringify(result.patients));
-                const selected = result.patients.find((p) => p.isSelected);
-                if (selected) set({ activePatientId: selected.id });
-              } else {
-                set({ patients: [] });
-              }
+            if (result.patients.length > 0) {
+              set({ patients: result.patients });
+              localStorage.setItem(userKey, JSON.stringify(result.patients));
+              const selected = result.patients.find((p) => p.isSelected);
+              if (selected) set({ activePatientId: selected.id });
+            } else {
+              set({ patients: [] });
+            }
 
-              if (result.isGuestMigration) {
-                debugLog(`[initAuth] Dados migrados do modo convidado para nuvem: ${result.migratedCount} pacientes`);
-              }
+            if (result.isGuestMigration) {
+              logInfo('Dados migrados do modo convidado para a nuvem', { migratedCount: result.migratedCount });
+            }
           } else {
             set({ currentUser: null });
             const { isGuestMode } = get();
@@ -386,7 +415,7 @@ const useStore = create(
                     set({ patients: parsed });
                     const selected = parsed.find((p) => p.isSelected);
                     if (selected) set({ activePatientId: selected.id });
-                    debugLog(`[initAuth] Modo não-logado: ${parsed.length} pacientes do localStorage`);
+                    logInfo('Carregados pacientes locais (modo não-autenticado)', { count: parsed.length });
                     set({ authLoading: false });
                     return;
                   }
@@ -407,6 +436,7 @@ const useStore = create(
           stored = localStorage.getItem(key + '_backup');
           if (stored) debugLog('[initGuestMode] Usando backup do localStorage');
         }
+        logInfo('Inicializando acesso em modo convidado');
         if (stored) {
           try {
             const parsed = JSON.parse(stored);
@@ -414,14 +444,14 @@ const useStore = create(
               set({ patients: parsed });
               const selected = parsed.find((p) => p.isSelected);
               if (selected) set({ activePatientId: selected.id });
-              debugLog(`[initGuestMode] Carregados ${parsed.length} pacientes de localStorage`);
+              logInfo('Carregados pacientes do modo convidado', { count: parsed.length });
               return;
             }
           } catch (e) { console.error('[initGuestMode] Erro ao ler dados:', e); }
         }
         localStorage.setItem(key, JSON.stringify(mockTeaPatients));
         set({ patients: mockTeaPatients, activePatientId: mockTeaPatients[0].id });
-        debugLog('[initGuestMode] Dados mock carregados');
+        logInfo('Dados mock carregados no modo convidado');
       },
 
       setGuestMode: (val) => {

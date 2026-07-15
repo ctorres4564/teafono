@@ -58,9 +58,9 @@ describe('rotas dos módulos de fluência', () => {
     expect(screen.getByLabelText('rota atual')).toHaveTextContent('/fluency/patient-1/speech');
   });
 
-  it('ignora tentativas de abrir o módulo de anamnese desabilitado', () => {
+  it('permite abrir o módulo de anamnese reativado', () => {
     renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'Tentar abrir anamnese' }));
-    expect(screen.getByLabelText('rota atual')).toHaveTextContent('/dashboard');
+    expect(screen.getByLabelText('rota atual')).toHaveTextContent('/anamnese/patient-1');
   });
 });

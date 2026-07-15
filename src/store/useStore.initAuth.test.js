@@ -11,6 +11,7 @@ vi.mock('../firebase', () => ({
   savePatientToFirestore: mockSavePatientToFirestore,
   deletePatientFromFirestore: vi.fn(),
   loadPatientsFromFirestore: mockLoadPatientsFromFirestore,
+  saveLogToFirestore: vi.fn().mockResolvedValue({ success: true }),
   auth: {},
   signOut: vi.fn(),
   onAuthStateChanged: mockOnAuthStateChanged,

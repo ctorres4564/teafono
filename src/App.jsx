@@ -15,6 +15,7 @@ import VocabularyPage from './pages/VocabularyPage';
 import FluencyPage from './pages/FluencyPage';
 import PhonologyPage from './pages/PhonologyPage';
 import VoicePage from './pages/VoicePage';
+import AnamnesePage from './pages/AnamnesePage';
 
 import OrofacialMotorPage from './pages/OrofacialMotorPage';
 import PhonologicalAwarenessPage from './pages/PhonologicalAwarenessPage';
@@ -85,6 +86,8 @@ export default function App() {
           </AuthGuard>
         }>
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/anamnese/:patientId" element={<AnamnesePage />} />
+          <Route path="/anamnese/:patientId/:entryId" element={<AnamnesePage />} />
           <Route path="/mchat/:patientId" element={<MchatPage />} />
           <Route path="/followup/:patientId" element={<FollowUpPage />} />
           <Route path="/pragmatics/:patientId" element={<PragmaticsPage />} />

@@ -22,5 +22,11 @@ service cloud.firestore {
     match /users/{userId}/assessments/{assessmentId} {
       allow read, write: if request.auth.uid == userId;
     }
+
+    // System Logs
+    match /users/{userId}/logs/{logId} {
+      allow read, write: if request.auth.uid == userId;
+    }
   }
 }
+

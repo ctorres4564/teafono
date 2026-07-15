@@ -26,6 +26,7 @@ export default function DashboardPage() {
     }
 
     const routeMap = {
+      anamnese: 'anamnese',
       mchat: 'mchat',
       pragmatics: 'pragmatics',
       bambi: 'bambi',
