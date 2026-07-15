@@ -16,9 +16,9 @@ export const PHONOLOGY_WORDS = [
   { id: 'pw15', target: 'Fogo', transcription: '', observations: '', imageUrl: '/assets/images/phonology/fogo_ilustracao_1784079794009.png' },
   { id: 'pw16', target: 'Rato', transcription: '', observations: '', imageUrl: '/assets/images/phonology/rato_ilustracao_1784079813325.png' },
   { id: 'pw17', target: 'Peixe', transcription: '', observations: '', imageUrl: '/assets/images/phonology/peixe_ilustracao_1784079822798.png' },
-  { id: 'pw18', target: 'Cachorro', transcription: '', observations: '' },
-  { id: 'pw19', target: 'Girafa', transcription: '', observations: '' },
-  { id: 'pw20', target: 'Telefone', transcription: '', observations: '' },
+  { id: 'pw18', target: 'Cachorro', transcription: '', observations: '', imageUrl: '/assets/images/phonology/cachorro_ilustracao_1784132950201.png' },
+  { id: 'pw19', target: 'Girafa', transcription: '', observations: '', imageUrl: '/assets/images/phonology/girafa_ilustracao_1784132975819.png' },
+  { id: 'pw20', target: 'Telefone', transcription: '', observations: '', imageUrl: '/assets/images/phonology/telefone_ilustracao_1784133001590.png' },
 ];
 
 export const PHONOLOGY_CONSONANTS = [
